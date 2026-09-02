@@ -21,15 +21,14 @@
         <div class="max-w-3xl mx-auto flex justify-between items-center">
             <div class="font-bold text-lg text-indigo-700 flex items-center gap-2">
                 <span>📐 MathQuiz</span>
-                <span id="headerBadge" class="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">โหมดฝึกซ้อม</span>
+                <span id="headerBadge" class="text-xs font-medium px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">โหมดฝึกซ้อม</span>
             </div>
             <div id="liveTimerBox" class="hidden flex items-center gap-2 text-rose-600 font-mono font-bold text-lg">
                 <span>⏳</span>
                 <span id="studentTimer">00:00</span>
             </div>
-            <!-- ปุ่มจบการฝึกฝนด่วนสำหรับโหมด Endless -->
             <button id="btnQuickFinish" onclick="confirmEndlessFinish()" class="hidden px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition">
-                ⏹ พอแล้ว / สรุปคะแนน
+                ⏹ พอแล้ว / สรุปผล
             </button>
         </div>
     </header>
@@ -38,12 +37,24 @@
 
         <!-- ================= 1. หน้า Lobby (ตั้งค่าก่อนเริ่ม) ================= -->
         <div id="viewLobby" class="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
-            <div class="text-center space-y-2">
-                <h2 id="lobbyQuizTitle" class="text-2xl font-bold text-slate-800">กำลังโหลดข้อสอบ...</h2>
-                <p class="text-sm text-slate-500">เลือกเงื่อนไขและรูปแบบการทำแบบฝึกหัดตามต้องการ</p>
+            
+            <!-- กรณีไม่มีข้อสอบในระบบ -->
+            <div id="noQuizWarning" class="hidden p-5 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 space-y-2 text-center">
+                <div class="text-2xl">⚠️</div>
+                <div class="font-bold text-base">ยังไม่มีชุดข้อสอบในระบบ</div>
+                <div class="text-xs text-amber-700">กรุณาแจ้งให้อาจารย์ทำการอัปโหลดไฟล์ข้อสอบ JSON ที่หน้าจออาจารย์ก่อน</div>
+                <button onclick="checkStatus()" class="mt-2 text-xs bg-amber-200 hover:bg-amber-300 text-amber-900 font-semibold px-3 py-1.5 rounded-md transition">
+                    🔄 กดเพื่อตรวจสอบอีกครั้ง
+                </button>
             </div>
 
-            <div class="space-y-4 pt-2">
+            <!-- กล่องแสดงชื่อชุดข้อสอบที่ดึงมาจาก Server -->
+            <div id="quizMetaBox" class="text-center space-y-1">
+                <h2 id="lobbyQuizTitle" class="text-2xl font-bold text-slate-800">กำลังตรวจสอบข้อสอบ...</h2>
+                <p id="lobbyQuizCount" class="text-sm font-medium text-indigo-600"></p>
+            </div>
+
+            <div id="lobbyControls" class="space-y-4 pt-2">
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-1">ชื่อผู้ทำแบบฝึกหัด:</label>
                     <input type="text" id="studentNameInput" placeholder="ระบุชื่อหรือรหัสนักเรียน" class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
@@ -53,18 +64,18 @@
                     <div class="p-4 rounded-xl border border-slate-200 bg-slate-50">
                         <label class="block text-sm font-semibold text-slate-700 mb-2">🔀 รูปแบบการทำ</label>
                         <div class="space-y-2 text-sm">
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="radio" name="optOrder" value="endless" checked class="text-indigo-600 focus:ring-indigo-500">
+                            <label class="flex items-start gap-2.5 cursor-pointer">
+                                <input type="radio" name="optOrder" value="endless" checked class="mt-1 text-indigo-600 focus:ring-indigo-500">
                                 <div>
                                     <div class="font-medium text-indigo-900">สุ่มทำไปเรื่อยๆ (Endless) 🎲</div>
-                                    <div class="text-xs text-slate-500">สุ่มโจทย์ทำได้ไม่จำกัดข้อ จนกว่าจะกดหยุดเอง</div>
+                                    <div class="text-xs text-slate-500">สุ่มโจทย์วนทำไม่ซ้ำข้อจนครบชุด และทำต่อได้เรื่อยๆ จนกว่าจะกดหยุดเอง</div>
                                 </div>
                             </label>
-                            <label class="flex items-center gap-2 cursor-pointer pt-1 border-t border-slate-200">
-                                <input type="radio" name="optOrder" value="sequential" class="text-indigo-600 focus:ring-indigo-500">
+                            <label class="flex items-start gap-2.5 cursor-pointer pt-2 border-t border-slate-200">
+                                <input type="radio" name="optOrder" value="sequential" class="mt-1 text-indigo-600 focus:ring-indigo-500">
                                 <div>
                                     <div class="font-medium text-slate-800">เรียงข้อ 1 ถึงข้อสุดท้าย</div>
-                                    <div class="text-xs text-slate-500">ทำตามลำดับข้อสอบจนครบชุด</div>
+                                    <div class="text-xs text-slate-500">ทำเรียงตามลำดับข้อสอบจนครบชุด</div>
                                 </div>
                             </label>
                         </div>
@@ -73,15 +84,15 @@
                     <div class="p-4 rounded-xl border border-slate-200 bg-slate-50">
                         <label class="block text-sm font-semibold text-slate-700 mb-2">💡 การตรวจ & เฉลย</label>
                         <div class="space-y-2 text-sm">
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="radio" name="optFeedback" value="instant" checked class="text-indigo-600 focus:ring-indigo-500">
+                            <label class="flex items-start gap-2.5 cursor-pointer">
+                                <input type="radio" name="optFeedback" value="instant" checked class="mt-1 text-indigo-600 focus:ring-indigo-500">
                                 <div>
                                     <div class="font-medium text-indigo-900">ตรวจทันทีรายข้อ</div>
                                     <div class="text-xs text-slate-500">ตอบปุ๊บบอกเฉลยและวิธีคิดทันที</div>
                                 </div>
                             </label>
-                            <label class="flex items-center gap-2 cursor-pointer pt-1 border-t border-slate-200">
-                                <input type="radio" name="optFeedback" value="summary" class="text-indigo-600 focus:ring-indigo-500">
+                            <label class="flex items-start gap-2.5 cursor-pointer pt-2 border-t border-slate-200">
+                                <input type="radio" name="optFeedback" value="summary" class="mt-1 text-indigo-600 focus:ring-indigo-500">
                                 <div>
                                     <div class="font-medium text-slate-800">ดูสรุปตอนสุดท้ายทีเดียว</div>
                                     <div class="text-xs text-slate-500">ทำต่อเนื่องแล้วตรวจพร้อมกันตอนจบ</div>
@@ -90,11 +101,11 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <button onclick="startPractice()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-sm transition text-base">
-                เข้าสู่แบบฝึกหัด 🚀
-            </button>
+                <button id="btnStartPractice" onclick="startPractice()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-sm transition text-base">
+                    เข้าสู่แบบฝึกหัด 🚀
+                </button>
+            </div>
         </div>
 
         <!-- ================= 2. หน้ากำลังทำข้อสอบ (Quiz Screen) ================= -->
@@ -159,21 +170,18 @@
     </div>
 
     <script>
-        let currentMode = "self"; // "live" | "self"
-        let practiceType = "endless"; // "endless" | "sequential"
-        let feedbackMode = "instant"; // "instant" | "summary"
+        let currentMode = "self";
+        let practiceType = "endless";
+        let feedbackMode = "instant";
         
-        let questionPool = []; // คลังโจทย์ทั้งหมด
-        let sequentialQuestions = []; // โจทย์สำหรับโหมดเรียง
+        let questionPool = []; // คลังข้อสอบทั้งหมดจากไฟล์ JSON
+        let endlessDeck = [];  // สำรับสุ่มข้อสอบ (เพื่อป้องกันข้อซ้ำ)
+        let sequentialQuestions = [];
         let currentIndex = 0;
         
-        // สำหรับโหมด Endless
-        let endlessHistory = []; // [ { q, userChoice, isCorrect } ]
+        let endlessHistory = [];
         let currentEndlessQ = null;
-        let lastEndlessQId = null;
-
-        // สำหรับโหมด Sequential / Live
-        let userAnswers = {}; // { q_id: choiceIndex }
+        let userAnswers = {};
 
         let timerInterval = null;
         let remainingSeconds = 0;
@@ -192,11 +200,30 @@
             }
         }
 
+        // ตรวจสอบกับ Server ว่ามีชุดข้อสอบที่อัปโหลดไว้หรือไม่
         async function checkStatus() {
             try {
                 const res = await fetch('/api/quiz-status');
                 const data = await res.json();
                 
+                const noQuizWarning = document.getElementById('noQuizWarning');
+                const btnStart = document.getElementById('btnStartPractice');
+                const lobbyControls = document.getElementById('lobbyControls');
+
+                if (!data.has_quiz) {
+                    noQuizWarning.classList.remove('hidden');
+                    document.getElementById('lobbyQuizTitle').innerText = "ยังไม่มีชุดข้อสอบ";
+                    document.getElementById('lobbyQuizCount').innerText = "";
+                    btnStart.disabled = true;
+                    return;
+                }
+
+                // มีข้อสอบในระบบ
+                noQuizWarning.classList.add('hidden');
+                btnStart.disabled = false;
+                document.getElementById('lobbyQuizTitle').innerText = data.quiz_title || "แบบฝึกหัดคณิตศาสตร์";
+                document.getElementById('lobbyQuizCount').innerText = `คลังข้อสอบทั้งหมด: ${data.total_questions} ข้อ`;
+
                 if (data.is_live) {
                     currentMode = "live";
                     document.getElementById('headerBadge').innerText = "โหมดสอบสด (Live)";
@@ -204,17 +231,19 @@
                     loadLiveQuiz(data.remaining_seconds);
                 } else {
                     currentMode = "self";
-                    document.getElementById('lobbyQuizTitle').innerText = data.quiz_title || "แบบฝึกหัดคณิตศาสตร์";
                 }
             } catch (err) {
                 console.error(err);
+                document.getElementById('lobbyQuizTitle').innerText = "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้";
             }
         }
 
-        // ==================== 1. Live Mode ====================
+        // 1. Live Mode
         async function loadLiveQuiz(timeLeft) {
             const res = await fetch('/api/get-quiz?mode=live');
             const data = await res.json();
+            if (!data.has_quiz) return;
+
             sequentialQuestions = data.questions;
             practiceType = "sequential";
             feedbackMode = "summary";
@@ -228,25 +257,26 @@
             loadSequentialQuestion(0);
         }
 
-        // ==================== 2. Self-Paced Mode ====================
+        // 2. Self-Paced Mode
         async function startPractice() {
             practiceType = document.querySelector('input[name="optOrder"]:checked').value;
             feedbackMode = document.querySelector('input[name="optFeedback"]:checked').value;
 
+            // Fetch ชุดข้อสอบจริงจาก Server
             const res = await fetch('/api/get-quiz?mode=self&order=sequential');
             const data = await res.json();
-            questionPool = data.questions;
-
-            if (!questionPool || questionPool.length === 0) {
-                alert("ไม่พบข้อสอบในระบบ");
+            
+            if (!data.has_quiz || !data.questions || data.questions.length === 0) {
+                alert("ไม่พบข้อสอบในระบบ กรุณารออาจารย์อัปโหลดไฟล์ JSON");
                 return;
             }
+
+            questionPool = data.questions;
 
             document.getElementById('viewLobby').classList.add('hidden');
             document.getElementById('viewQuiz').classList.remove('hidden');
 
             if (practiceType === 'endless') {
-                // เริ่มต้นโหมด Endless
                 document.getElementById('headerBadge').innerText = "โหมดสุ่มต่อเนื่อง (Endless)";
                 document.getElementById('headerBadge').className = "text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700";
                 document.getElementById('endlessStatsBadge').classList.remove('hidden');
@@ -255,39 +285,43 @@
                 document.getElementById('btnPrev').classList.add('hidden');
                 document.getElementById('quizModeBadge').innerText = feedbackMode === "instant" ? "ตรวจรายข้อ" : "ตรวจตอนจบ";
                 
+                // สร้างสำรับสุ่มใบแรก
+                endlessDeck = [];
                 loadNextEndlessQuestion();
             } else {
-                // โหมดเรียง 1..N
                 sequentialQuestions = questionPool;
                 document.getElementById('quizModeBadge').innerText = feedbackMode === "instant" ? "เรียงข้อ • ตรวจรายข้อ" : "เรียงข้อ • ตรวจตอนท้าย";
                 loadSequentialQuestion(0);
             }
         }
 
-        // ---------- Endless Mode Logic ----------
+        // ---------- Deck System: สุ่มข้อสอบแบบสำรับไพ่ (ไม่ซ้ำจนกว่าจะครบ 30 ข้อ) ----------
         function loadNextEndlessQuestion() {
-            // สุ่มข้อใหม่โดยพยายามไม่ให้ซ้ำกับข้อเดิมล่าสุด
-            let available = questionPool.length > 1 
-                ? questionPool.filter(q => q.id !== lastEndlessQId) 
-                : questionPool;
-            
-            const randIdx = Math.floor(Math.random() * available.length);
-            currentEndlessQ = available[randIdx];
-            lastEndlessQId = currentEndlessQ.id;
+            // ถ้าสำรับหมด ให้สร้างสำรับใหม่โดยสับข้อสอบทั้ง 30 ข้อใหม่
+            if (endlessDeck.length === 0) {
+                endlessDeck = [...questionPool];
+                // Fisher-Yates Shuffle
+                for (let i = endlessDeck.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [endlessDeck[i], endlessDeck[j]] = [endlessDeck[j], endlessDeck[i]];
+                }
+            }
+
+            // จั่วข้อถัดไปออกจากสำรับ
+            currentEndlessQ = endlessDeck.pop();
 
             const questionNumber = endlessHistory.length + 1;
-            document.getElementById('questionProgress').innerText = `ข้อที่สุ่มได้ #${questionNumber}`;
+            document.getElementById('questionProgress').innerText = `ข้อที่สุ่มได้ #${questionNumber} (จากคลัง ${questionPool.length} ข้อ)`;
             document.getElementById('questionText').innerHTML = `<span class="text-indigo-600 font-bold">โจทย์:</span> ${currentEndlessQ.question}`;
             
             updateEndlessBadge();
 
-            // เรนเดอร์ตัวเลือก
             renderChoices(currentEndlessQ, null, (idx) => {
                 selectEndlessChoice(idx);
             });
 
             document.getElementById('instantFeedbackBox').classList.add('hidden');
-            document.getElementById('btnNext').disabled = true; // บังคับให้เลือกคำตอบก่อน
+            document.getElementById('btnNext').disabled = true; // บังคับให้ตอบก่อนกดถัดไป
             document.getElementById('btnNext').innerText = "สุ่มข้อถัดไป ❯";
             document.getElementById('btnSubmit').classList.add('hidden');
 
@@ -297,7 +331,6 @@
         function selectEndlessChoice(chosenIdx) {
             const isCorrect = (chosenIdx === currentEndlessQ.correct_answer_index);
             
-            // บันทึกประวัติ
             endlessHistory.push({
                 q: currentEndlessQ,
                 chosen: chosenIdx,
@@ -307,16 +340,12 @@
             });
 
             updateEndlessBadge();
-
-            // Re-render ตัวเลือกให้เห็นสถานะที่เลือก
             renderChoices(currentEndlessQ, chosenIdx, null);
 
-            // Instant Feedback
             if (feedbackMode === 'instant') {
                 showInstantFeedbackBox(currentEndlessQ, chosenIdx);
             }
 
-            // ปลดล็อคปุ่มถัดไป
             document.getElementById('btnNext').disabled = false;
         }
 
@@ -331,13 +360,12 @@
                 alert("คุณยังไม่ได้ทำข้อสอบเลยสักข้อ");
                 return;
             }
-            if (confirm(`คุณทำไปแล้วทั้งหมด ${endlessHistory.length} ข้อ ต้องการจบการฝึกฝนและดูผลสรุปใช่หรือไม่?`)) {
+            if (confirm(`คุณทำแบบฝึกหัดไปแล้วทั้งหมด ${endlessHistory.length} ข้อ ยืนยันการจบการฝึกฝนและดูผลสรุปหรือไม่?`)) {
                 finishEndlessPractice();
             }
         }
 
         async function finishEndlessPractice() {
-            // ส่งผลคะแนนไปยังเซิร์ฟเวอร์
             const studentName = document.getElementById('studentNameInput').value.trim() || "Anonymous Student";
             const answersMap = {};
             endlessHistory.forEach(h => {
@@ -353,7 +381,6 @@
                 })
             }).catch(e => console.error(e));
 
-            // แสดงหน้าสรุปผลของ Endless Mode
             showEndlessResultView();
         }
 
@@ -393,7 +420,7 @@
             renderMath();
         }
 
-        // ---------- Sequential & Live Mode Logic ----------
+        // ---------- Sequential & Live Mode ----------
         function loadSequentialQuestion(index) {
             currentIndex = index;
             const q = sequentialQuestions[currentIndex];
@@ -426,7 +453,6 @@
             renderMath();
         }
 
-        // Helper Render ตัวเลือก
         function renderChoices(q, chosenIdx, onClickCallback) {
             const container = document.getElementById('choicesContainer');
             container.innerHTML = '';
