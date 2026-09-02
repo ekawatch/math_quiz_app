@@ -8,7 +8,6 @@ from fastapi import FastAPI, Request, UploadFile, File, WebSocket, WebSocketDisc
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
-# กำหนด Path ให้ชี้ไปที่โฟลเดอร์ templates อย่างถูกต้อง
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
@@ -39,7 +38,6 @@ class QuizState:
         self.start_timestamp = time.time()
         self.submissions = []
         
-        # สุ่มลำดับข้อสอบ 1 ชุด เพื่อใช้ร่วมกันสำหรับโหมด Live
         shuffled = list(self.raw_quiz["questions"])
         random.shuffle(shuffled)
         self.live_shuffled_questions = shuffled
@@ -59,9 +57,9 @@ class QuizState:
             return 0
         return remaining
 
-    def add_submission(self, student_name: str, answers: Dict[str, int]):
+    def add_submission(self, student_name: str, answers: Dict[str, int]) -> Dict[str, Any]:
         if not self.raw_quiz:
-            return
+            return {"score": 0, "total": 0, "details": {}}
         
         questions = self.raw_quiz["questions"]
         q_map = {str(q["id"]): q for q in questions}
@@ -77,7 +75,8 @@ class QuizState:
                 details[q_id_str] = {
                     "chosen": chosen_idx,
                     "correct": correct_idx,
-                    "is_correct": is_correct
+                    "is_correct": is_correct,
+                    "explanation": q_map[q_id_str].get("explanation", "")
                 }
         
         self.submissions.append({
@@ -87,6 +86,12 @@ class QuizState:
             "answers": details,
             "submitted_at": time.time()
         })
+        
+        return {
+            "score": score,
+            "total": len(questions),
+            "details": details
+        }
 
     def get_analytics(self) -> Dict[str, Any]:
         if not self.raw_quiz or not self.submissions:
@@ -100,13 +105,11 @@ class QuizState:
         total_q = len(self.raw_quiz["questions"])
         scores = [sub["score"] for sub in self.submissions]
         
-        # คำนวณ Histogram
         hist_data = [0] * (total_q + 1)
         for s in scores:
             if 0 <= s <= total_q:
                 hist_data[s] += 1
                 
-        # วิเคราะห์ข้อที่ตอบผิด (Item Analysis)
         q_stats = {}
         for q in self.raw_quiz["questions"]:
             q_id = str(q["id"])
@@ -144,7 +147,6 @@ class QuizState:
                 "choice_counts": data["choice_counts"]
             })
 
-        # เรียงจากข้อที่คนตอบผิดมากที่สุด ไปหาน้อยที่สุด
         error_ranking.sort(key=lambda x: x["error_rate"], reverse=True)
 
         return {
@@ -169,33 +171,19 @@ sample_quiz = {
             "choices": ["0", "1", "2", "หาค่าไม่ได้"],
             "correct_answer_index": 2,
             "explanation": "เนื่องจาก $\\lim_{x \\to 0} \\frac{\\sin(kx)}{x} = k$ ดังนั้น $\\lim_{x \\to 0} \\frac{\\sin(2x)}{x} = 2$"
-        },
-        {
-            "id": 2,
-            "question": "กำหนดให้ $f(x) = x^3 - 3x^2 + 5$ จงหาค่าของ $f'(2)$",
-            "choices": ["$0$", "$3$", "$-1$", "$12$"],
-            "correct_answer_index": 0,
-            "explanation": "ดิฟ $f(x)$ ได้ $f'(x) = 3x^2 - 6x$ แทนค่า $x = 2$ ได้ $f'(2) = 3(4) - 6(2) = 12 - 12 = 0$"
         }
     ]
 }
 state.set_quiz(sample_quiz)
 
 # ==================== Routes ====================
-# ปรับปรุง TemplateResponse ให้เป็นรูปแบบใหม่ของ Starlette/FastAPI
 @app.get("/", response_class=HTMLResponse)
 async def student_page(request: Request):
-    return templates.TemplateResponse(
-        request=request, 
-        name="student.html"
-    )
+    return templates.TemplateResponse(request=request, name="student.html")
 
 @app.get("/teacher", response_class=HTMLResponse)
 async def teacher_page(request: Request):
-    return templates.TemplateResponse(
-        request=request, 
-        name="teacher.html"
-    )
+    return templates.TemplateResponse(request=request, name="teacher.html")
 
 @app.get("/api/template")
 async def get_template():
@@ -288,11 +276,16 @@ async def submit_quiz(request: Request):
     data = await request.json()
     name = data.get("student_name", "Anonymous")
     answers = data.get("answers", {})
-    state.add_submission(name, answers)
+    result = state.add_submission(name, answers)
     
     analytics = state.get_analytics()
     await notify_teachers({"type": "NEW_SUBMISSION", "analytics": analytics})
-    return {"status": "success"}
+    return {
+        "status": "success",
+        "score": result["score"],
+        "total": result["total"],
+        "details": result["details"]
+    }
 
 # ==================== WebSocket ====================
 @app.websocket("/ws/teacher")
@@ -325,9 +318,7 @@ async def notify_teachers(message: dict):
     for ws in disconnected:
         state.connected_teachers.remove(ws)
 
-# ==================== Main Runner ====================
 if __name__ == "__main__":
     import uvicorn
-    # ดึงพอร์ตอัตโนมัติจาก Render Environment Variable
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run("app:app", host="0.0.0.0", port=port)

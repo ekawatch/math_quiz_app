@@ -32,7 +32,7 @@
 
     <div class="w-full max-w-3xl p-4 sm:p-6 my-auto">
 
-        <!-- ================= 1. หน้า Lobby (สำหรับโหมดทำตามอัธยาศัย) ================= -->
+        <!-- 1. หน้า Lobby (สำหรับโหมดทำตามอัธยาศัย) -->
         <div id="viewLobby" class="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
             <div class="text-center space-y-2">
                 <h2 id="lobbyQuizTitle" class="text-2xl font-bold text-slate-800">กำลังโหลดข้อสอบ...</h2>
@@ -81,30 +81,21 @@
             </button>
         </div>
 
-        <!-- ================= 2. หน้ากำลังทำข้อสอบ (Quiz Screen) ================= -->
+        <!-- 2. หน้ากำลังทำข้อสอบ (Quiz Screen) -->
         <div id="viewQuiz" class="hidden bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
-            <!-- Header ข้อสอบ -->
             <div class="flex justify-between items-center pb-3 border-b border-slate-100">
                 <span class="text-sm font-semibold text-indigo-600" id="questionProgress">ข้อที่ 1 / 10</span>
                 <span id="quizModeBadge" class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">โหมดฝึกซ้อม</span>
             </div>
 
-            <!-- ข้อความโจทย์ -->
             <div id="questionText" class="text-lg sm:text-xl font-medium text-slate-800 leading-relaxed min-h-[60px]">
                 กำลังโหลดโจทย์...
             </div>
 
-            <!-- รายการตัวเลือก 4 ตัวเลือก -->
-            <div id="choicesContainer" class="space-y-3">
-                <!-- Choice Elements จะถูกแทรกที่นี่ -->
-            </div>
+            <div id="choicesContainer" class="space-y-3"></div>
 
-            <!-- กล่อง Feedback ตรวจทันที (สำหรับ Instant Feedback Mode) -->
-            <div id="instantFeedbackBox" class="hidden p-4 rounded-xl text-sm leading-relaxed space-y-2">
-                <!-- ข้อความตรวจเฉลยและคำอธิบาย LaTeX -->
-            </div>
+            <div id="instantFeedbackBox" class="hidden p-4 rounded-xl text-sm leading-relaxed space-y-2"></div>
 
-            <!-- แถบปุ่มควบคุมการเปลี่ยนข้อ / ส่งคำตอบ -->
             <div class="flex justify-between items-center pt-4 border-t border-slate-100">
                 <button id="btnPrev" onclick="prevQuestion()" class="px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition disabled:opacity-40" disabled>
                     ◀ ข้อย้อนหลัง
@@ -120,7 +111,7 @@
             </div>
         </div>
 
-        <!-- ================= 3. หน้าสรุปผลคะแนน & เฉลยรวม (Result Summary) ================= -->
+        <!-- 3. หน้าสรุปผลคะแนน & เฉลยรวม (Result Summary) -->
         <div id="viewResult" class="hidden bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
             <div class="text-center space-y-2">
                 <div class="text-4xl">🎉</div>
@@ -131,10 +122,7 @@
                 <p class="text-xs text-slate-400">ผลคะแนนถูกบันทึกไปยังรายงานของห้องเรียนแล้ว</p>
             </div>
 
-            <!-- กล่องสรุปเฉลยทุกข้อ -->
-            <div id="summaryReviewList" class="space-y-4 pt-4 border-t border-slate-100">
-                <!-- รายการเฉลยและคำอธิบาย LaTeX ทุกข้อ -->
-            </div>
+            <div id="summaryReviewList" class="space-y-4 pt-4 border-t border-slate-100"></div>
 
             <button onclick="location.reload()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition text-sm">
                 ↺ ทำแบบฝึกหัดใหม่อีกครั้ง
@@ -144,11 +132,11 @@
     </div>
 
     <script>
-        let currentMode = "self"; // "live" | "self"
-        let feedbackMode = "summary"; // "instant" | "summary"
+        let currentMode = "self";
+        let feedbackMode = "summary";
         let questions = [];
         let currentIndex = 0;
-        let userAnswers = {}; // { q_id: choiceIndex }
+        let userAnswers = {};
         let timerInterval = null;
         let remainingSeconds = 0;
 
@@ -166,7 +154,6 @@
             }
         }
 
-        // ตรวจสอบสถานะการสอบสด
         async function checkStatus() {
             try {
                 const res = await fetch('/api/quiz-status');
@@ -186,12 +173,11 @@
             }
         }
 
-        // เริ่มโหมด Live
         async function loadLiveQuiz(timeLeft) {
             const res = await fetch('/api/get-quiz?mode=live');
             const data = await res.json();
             questions = data.questions;
-            feedbackMode = "summary"; // Live mode ไม่อนุญาต instant feedback
+            feedbackMode = "summary";
             
             document.getElementById('viewLobby').classList.add('hidden');
             document.getElementById('viewQuiz').classList.remove('hidden');
@@ -202,9 +188,7 @@
             loadQuestion(0);
         }
 
-        // เริ่มโหมด Self-Paced
         async function startPractice() {
-            const name = document.getElementById('studentNameInput').value.trim() || "Anonymous";
             const order = document.querySelector('input[name="optOrder"]:checked').value;
             feedbackMode = document.querySelector('input[name="optFeedback"]:checked').value;
 
@@ -248,7 +232,6 @@
                 container.appendChild(btn);
             });
 
-            // ปรับปุ่ม Previous / Next / Submit
             document.getElementById('btnPrev').disabled = (currentIndex === 0);
             if (currentIndex === questions.length - 1) {
                 document.getElementById('btnNext').classList.add('hidden');
@@ -258,7 +241,6 @@
                 document.getElementById('btnSubmit').classList.add('hidden');
             }
 
-            // จัดการ Instant Feedback (ถ้าเปิดใช้)
             const feedbackBox = document.getElementById('instantFeedbackBox');
             if (currentMode === 'self' && feedbackMode === 'instant' && chosen !== undefined) {
                 showInstantFeedback(q, chosen);
@@ -266,7 +248,6 @@
                 feedbackBox.classList.add('hidden');
             }
 
-            // Re-render LaTeX
             renderMath();
         }
 
@@ -313,34 +294,49 @@
 
             const studentName = document.getElementById('studentNameInput').value.trim() || "Anonymous Student";
             
-            // ส่งคะแนนไปยัง Server
-            await fetch('/api/submit', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    student_name: studentName,
-                    answers: userAnswers
-                })
-            });
-
-            // แสดงหน้าสรุปผล
-            showResultView();
+            try {
+                const res = await fetch('/api/submit', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        student_name: studentName,
+                        answers: userAnswers
+                    })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    showResultView(data);
+                } else {
+                    alert('เกิดข้อผิดพลาดในการส่งคำตอบ');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('ไม่สามารถส่งคำตอบได้ กรุณาลองใหม่อีกครั้ง');
+            }
         }
 
-        function showResultView() {
+        function showResultView(resultData) {
             clearInterval(timerInterval);
             document.getElementById('viewQuiz').classList.add('hidden');
             document.getElementById('liveTimerBox').classList.add('hidden');
             document.getElementById('viewResult').classList.remove('hidden');
 
-            let score = 0;
+            const details = resultData ? resultData.details : {};
+            const score = resultData ? resultData.score : 0;
+            const total = resultData ? resultData.total : questions.length;
+
             const reviewContainer = document.getElementById('summaryReviewList');
             reviewContainer.innerHTML = '';
 
             questions.forEach((q, idx) => {
-                const userChoice = userAnswers[q.id];
-                const isCorrect = (userChoice === q.correct_answer_index);
-                if (isCorrect) score++;
+                const qIdStr = String(q.id);
+                const itemResult = details[qIdStr] || {};
+                
+                // ดึงข้อมูลผลลัพธ์ที่ Server ประมวลผลส่งกลับมา
+                const userChoice = itemResult.chosen !== undefined ? itemResult.chosen : userAnswers[q.id];
+                const correctChoice = itemResult.correct !== undefined ? itemResult.correct : q.correct_answer_index;
+                const isCorrect = itemResult.is_correct !== undefined ? itemResult.is_correct : (userChoice === correctChoice);
+                const explanation = itemResult.explanation || q.explanation || '';
 
                 const reviewItem = document.createElement('div');
                 reviewItem.className = `p-4 rounded-xl border text-sm space-y-2 ${isCorrect ? 'bg-emerald-50/60 border-emerald-200' : 'bg-rose-50/60 border-rose-200'}`;
@@ -351,15 +347,15 @@
                     </div>
                     <div class="text-slate-800 font-medium">${q.question}</div>
                     <div class="text-xs text-slate-600">
-                        คุณตอบ: <b>${userChoice !== undefined ? ['A','B','C','D'][userChoice] : 'ไม่ตอบ'}</b> | 
-                        เฉลย: <b class="text-emerald-700">${['A','B','C','D'][q.correct_answer_index]}</b>
+                        คุณตอบ: <b>${userChoice !== undefined && userChoice >= 0 ? ['A','B','C','D'][userChoice] : 'ไม่ตอบ'}</b> | 
+                        เฉลย: <b class="text-emerald-700">${correctChoice !== undefined ? ['A','B','C','D'][correctChoice] : '-'}</b>
                     </div>
-                    ${q.explanation ? `<div class="p-2.5 rounded bg-white border border-slate-200 text-xs text-slate-600">💡 <b>คำอธิบาย:</b> ${q.explanation}</div>` : ''}
+                    ${explanation ? `<div class="p-2.5 rounded bg-white border border-slate-200 text-xs text-slate-600">💡 <b>คำอธิบาย:</b> ${explanation}</div>` : ''}
                 `;
                 reviewContainer.appendChild(reviewItem);
             });
 
-            document.getElementById('finalScoreDisplay').innerText = `${score} / ${questions.length}`;
+            document.getElementById('finalScoreDisplay').innerText = `${score} / ${total}`;
             renderMath();
         }
 
