@@ -39,6 +39,7 @@ class QuizState:
         self.start_timestamp = time.time()
         self.submissions = []
         
+        # สุ่มลำดับข้อสอบ 1 ชุด เพื่อใช้ร่วมกันสำหรับโหมด Live
         shuffled = list(self.raw_quiz["questions"])
         random.shuffle(shuffled)
         self.live_shuffled_questions = shuffled
@@ -99,11 +100,13 @@ class QuizState:
         total_q = len(self.raw_quiz["questions"])
         scores = [sub["score"] for sub in self.submissions]
         
+        # คำนวณ Histogram
         hist_data = [0] * (total_q + 1)
         for s in scores:
             if 0 <= s <= total_q:
                 hist_data[s] += 1
                 
+        # วิเคราะห์ข้อที่ตอบผิด (Item Analysis)
         q_stats = {}
         for q in self.raw_quiz["questions"]:
             q_id = str(q["id"])
@@ -141,6 +144,7 @@ class QuizState:
                 "choice_counts": data["choice_counts"]
             })
 
+        # เรียงจากข้อที่คนตอบผิดมากที่สุด ไปหาน้อยที่สุด
         error_ranking.sort(key=lambda x: x["error_rate"], reverse=True)
 
         return {
@@ -178,13 +182,20 @@ sample_quiz = {
 state.set_quiz(sample_quiz)
 
 # ==================== Routes ====================
+# ปรับปรุง TemplateResponse ให้เป็นรูปแบบใหม่ของ Starlette/FastAPI
 @app.get("/", response_class=HTMLResponse)
 async def student_page(request: Request):
-    return templates.TemplateResponse("student.html", {"request": request})
+    return templates.TemplateResponse(
+        request=request, 
+        name="student.html"
+    )
 
 @app.get("/teacher", response_class=HTMLResponse)
 async def teacher_page(request: Request):
-    return templates.TemplateResponse("teacher.html", {"request": request})
+    return templates.TemplateResponse(
+        request=request, 
+        name="teacher.html"
+    )
 
 @app.get("/api/template")
 async def get_template():
@@ -317,6 +328,6 @@ async def notify_teachers(message: dict):
 # ==================== Main Runner ====================
 if __name__ == "__main__":
     import uvicorn
-    # ดึงค่า PORT จาก Environment Variable ของ Render (ถ้าไม่มีจะใช้ 8000 เป็นค่า Default)
+    # ดึงพอร์ตอัตโนมัติจาก Render Environment Variable
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run("app:app", host="0.0.0.0", port=port)
