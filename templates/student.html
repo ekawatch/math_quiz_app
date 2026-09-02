@@ -21,22 +21,26 @@
         <div class="max-w-3xl mx-auto flex justify-between items-center">
             <div class="font-bold text-lg text-indigo-700 flex items-center gap-2">
                 <span>📐 MathQuiz</span>
-                <span id="headerBadge" class="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">โหมดทั่วไป</span>
+                <span id="headerBadge" class="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">โหมดฝึกซ้อม</span>
             </div>
             <div id="liveTimerBox" class="hidden flex items-center gap-2 text-rose-600 font-mono font-bold text-lg">
                 <span>⏳</span>
                 <span id="studentTimer">00:00</span>
             </div>
+            <!-- ปุ่มจบการฝึกฝนด่วนสำหรับโหมด Endless -->
+            <button id="btnQuickFinish" onclick="confirmEndlessFinish()" class="hidden px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition">
+                ⏹ พอแล้ว / สรุปคะแนน
+            </button>
         </div>
     </header>
 
     <div class="w-full max-w-3xl p-4 sm:p-6 my-auto">
 
-        <!-- 1. หน้า Lobby (สำหรับโหมดทำตามอัธยาศัย) -->
+        <!-- ================= 1. หน้า Lobby (ตั้งค่าก่อนเริ่ม) ================= -->
         <div id="viewLobby" class="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
             <div class="text-center space-y-2">
                 <h2 id="lobbyQuizTitle" class="text-2xl font-bold text-slate-800">กำลังโหลดข้อสอบ...</h2>
-                <p class="text-sm text-slate-500">เลือกเงื่อนไขและรูปแบบการทำแบบฝึกหัดตามความต้องการ</p>
+                <p class="text-sm text-slate-500">เลือกเงื่อนไขและรูปแบบการทำแบบฝึกหัดตามต้องการ</p>
             </div>
 
             <div class="space-y-4 pt-2">
@@ -47,15 +51,21 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="p-4 rounded-xl border border-slate-200 bg-slate-50">
-                        <label class="block text-sm font-semibold text-slate-700 mb-2">🔀 ลำดับข้อสอบ</label>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">🔀 รูปแบบการทำ</label>
                         <div class="space-y-2 text-sm">
                             <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="radio" name="optOrder" value="sequential" checked class="text-indigo-600 focus:ring-indigo-500">
-                                <span>เรียงข้อ 1 ถึงข้อสุดท้าย</span>
+                                <input type="radio" name="optOrder" value="endless" checked class="text-indigo-600 focus:ring-indigo-500">
+                                <div>
+                                    <div class="font-medium text-indigo-900">สุ่มทำไปเรื่อยๆ (Endless) 🎲</div>
+                                    <div class="text-xs text-slate-500">สุ่มโจทย์ทำได้ไม่จำกัดข้อ จนกว่าจะกดหยุดเอง</div>
+                                </div>
                             </label>
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="radio" name="optOrder" value="random" class="text-indigo-600 focus:ring-indigo-500">
-                                <span>สุ่มลำดับข้อสอบ</span>
+                            <label class="flex items-center gap-2 cursor-pointer pt-1 border-t border-slate-200">
+                                <input type="radio" name="optOrder" value="sequential" class="text-indigo-600 focus:ring-indigo-500">
+                                <div>
+                                    <div class="font-medium text-slate-800">เรียงข้อ 1 ถึงข้อสุดท้าย</div>
+                                    <div class="text-xs text-slate-500">ทำตามลำดับข้อสอบจนครบชุด</div>
+                                </div>
                             </label>
                         </div>
                     </div>
@@ -64,12 +74,18 @@
                         <label class="block text-sm font-semibold text-slate-700 mb-2">💡 การตรวจ & เฉลย</label>
                         <div class="space-y-2 text-sm">
                             <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="radio" name="optFeedback" value="summary" checked class="text-indigo-600 focus:ring-indigo-500">
-                                <span>ดูสรุปเฉลยตอนสุดท้ายทีเดียว</span>
+                                <input type="radio" name="optFeedback" value="instant" checked class="text-indigo-600 focus:ring-indigo-500">
+                                <div>
+                                    <div class="font-medium text-indigo-900">ตรวจทันทีรายข้อ</div>
+                                    <div class="text-xs text-slate-500">ตอบปุ๊บบอกเฉลยและวิธีคิดทันที</div>
+                                </div>
                             </label>
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="radio" name="optFeedback" value="instant" class="text-indigo-600 focus:ring-indigo-500">
-                                <span>ตรวจรายข้อ (ผิดแล้วบอกทันที)</span>
+                            <label class="flex items-center gap-2 cursor-pointer pt-1 border-t border-slate-200">
+                                <input type="radio" name="optFeedback" value="summary" class="text-indigo-600 focus:ring-indigo-500">
+                                <div>
+                                    <div class="font-medium text-slate-800">ดูสรุปตอนสุดท้ายทีเดียว</div>
+                                    <div class="text-xs text-slate-500">ทำต่อเนื่องแล้วตรวจพร้อมกันตอนจบ</div>
+                                </div>
                             </label>
                         </div>
                     </div>
@@ -81,11 +97,18 @@
             </button>
         </div>
 
-        <!-- 2. หน้ากำลังทำข้อสอบ (Quiz Screen) -->
+        <!-- ================= 2. หน้ากำลังทำข้อสอบ (Quiz Screen) ================= -->
         <div id="viewQuiz" class="hidden bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
             <div class="flex justify-between items-center pb-3 border-b border-slate-100">
-                <span class="text-sm font-semibold text-indigo-600" id="questionProgress">ข้อที่ 1 / 10</span>
-                <span id="quizModeBadge" class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">โหมดฝึกซ้อม</span>
+                <span class="text-sm font-bold text-indigo-600" id="questionProgress">ข้อที่ 1</span>
+                <div class="flex items-center gap-2">
+                    <span id="endlessStatsBadge" class="hidden text-xs bg-indigo-50 text-indigo-700 font-semibold px-2.5 py-1 rounded-full border border-indigo-100">
+                        ทำแล้ว: 0 | ถูก: 0
+                    </span>
+                    <span id="quizModeBadge" class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">
+                        โหมดฝึกซ้อม
+                    </span>
+                </div>
             </div>
 
             <div id="questionText" class="text-lg sm:text-xl font-medium text-slate-800 leading-relaxed min-h-[60px]">
@@ -96,11 +119,15 @@
 
             <div id="instantFeedbackBox" class="hidden p-4 rounded-xl text-sm leading-relaxed space-y-2"></div>
 
+            <!-- ปุ่มควบคุมด้านล่าง -->
             <div class="flex justify-between items-center pt-4 border-t border-slate-100">
                 <button id="btnPrev" onclick="prevQuestion()" class="px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition disabled:opacity-40" disabled>
                     ◀ ข้อย้อนหลัง
                 </button>
                 <div class="flex gap-2">
+                    <button id="btnEndlessFinish" onclick="confirmEndlessFinish()" class="hidden px-4 py-2 text-sm font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition border border-rose-200">
+                        ⏹ จบการฝึกฝน
+                    </button>
                     <button id="btnNext" onclick="nextQuestion()" class="px-5 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition shadow-sm">
                         ข้อถัดไป ▶
                     </button>
@@ -111,20 +138,20 @@
             </div>
         </div>
 
-        <!-- 3. หน้าสรุปผลคะแนน & เฉลยรวม (Result Summary) -->
+        <!-- ================= 3. หน้าสรุปผลคะแนน & เฉลยรวม ================= -->
         <div id="viewResult" class="hidden bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
             <div class="text-center space-y-2">
                 <div class="text-4xl">🎉</div>
-                <h2 class="text-2xl font-bold text-slate-800">ส่งคำตอบเรียบร้อยแล้ว</h2>
+                <h2 class="text-2xl font-bold text-slate-800">สรุปผลการทำแบบฝึกหัด</h2>
                 <div class="text-3xl font-extrabold text-indigo-600" id="finalScoreDisplay">
                     0 / 0
                 </div>
-                <p class="text-xs text-slate-400">ผลคะแนนถูกบันทึกไปยังรายงานของห้องเรียนแล้ว</p>
+                <p id="accuracyRateText" class="text-sm font-medium text-slate-500">ความถูกต้อง 0%</p>
             </div>
 
             <div id="summaryReviewList" class="space-y-4 pt-4 border-t border-slate-100"></div>
 
-            <button onclick="location.reload()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition text-sm">
+            <button onclick="location.reload()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition text-sm shadow-sm">
                 ↺ ทำแบบฝึกหัดใหม่อีกครั้ง
             </button>
         </div>
@@ -132,11 +159,22 @@
     </div>
 
     <script>
-        let currentMode = "self";
-        let feedbackMode = "summary";
-        let questions = [];
+        let currentMode = "self"; // "live" | "self"
+        let practiceType = "endless"; // "endless" | "sequential"
+        let feedbackMode = "instant"; // "instant" | "summary"
+        
+        let questionPool = []; // คลังโจทย์ทั้งหมด
+        let sequentialQuestions = []; // โจทย์สำหรับโหมดเรียง
         let currentIndex = 0;
-        let userAnswers = {};
+        
+        // สำหรับโหมด Endless
+        let endlessHistory = []; // [ { q, userChoice, isCorrect } ]
+        let currentEndlessQ = null;
+        let lastEndlessQId = null;
+
+        // สำหรับโหมด Sequential / Live
+        let userAnswers = {}; // { q_id: choiceIndex }
+
         let timerInterval = null;
         let remainingSeconds = 0;
 
@@ -162,7 +200,7 @@
                 if (data.is_live) {
                     currentMode = "live";
                     document.getElementById('headerBadge').innerText = "โหมดสอบสด (Live)";
-                    document.getElementById('headerBadge').className = "text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 animate-pulse";
+                    document.getElementById('headerBadge').className = "text-xs font-semibold px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 animate-pulse";
                     loadLiveQuiz(data.remaining_seconds);
                 } else {
                     currentMode = "self";
@@ -173,10 +211,12 @@
             }
         }
 
+        // ==================== 1. Live Mode ====================
         async function loadLiveQuiz(timeLeft) {
             const res = await fetch('/api/get-quiz?mode=live');
             const data = await res.json();
-            questions = data.questions;
+            sequentialQuestions = data.questions;
+            practiceType = "sequential";
             feedbackMode = "summary";
             
             document.getElementById('viewLobby').classList.add('hidden');
@@ -185,45 +225,224 @@
             document.getElementById('quizModeBadge').innerText = "กำลังสอบสด";
 
             startLiveTimer(timeLeft);
-            loadQuestion(0);
+            loadSequentialQuestion(0);
         }
 
+        // ==================== 2. Self-Paced Mode ====================
         async function startPractice() {
-            const order = document.querySelector('input[name="optOrder"]:checked').value;
+            practiceType = document.querySelector('input[name="optOrder"]:checked').value;
             feedbackMode = document.querySelector('input[name="optFeedback"]:checked').value;
 
-            const res = await fetch(`/api/get-quiz?mode=self&order=${order}`);
+            const res = await fetch('/api/get-quiz?mode=self&order=sequential');
             const data = await res.json();
-            questions = data.questions;
+            questionPool = data.questions;
+
+            if (!questionPool || questionPool.length === 0) {
+                alert("ไม่พบข้อสอบในระบบ");
+                return;
+            }
 
             document.getElementById('viewLobby').classList.add('hidden');
             document.getElementById('viewQuiz').classList.remove('hidden');
-            document.getElementById('quizModeBadge').innerText = feedbackMode === "instant" ? "ฝึกฝน: ตรวจรายข้อ" : "ฝึกฝน: ตรวจตอนท้าย";
 
-            loadQuestion(0);
+            if (practiceType === 'endless') {
+                // เริ่มต้นโหมด Endless
+                document.getElementById('headerBadge').innerText = "โหมดสุ่มต่อเนื่อง (Endless)";
+                document.getElementById('headerBadge').className = "text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700";
+                document.getElementById('endlessStatsBadge').classList.remove('hidden');
+                document.getElementById('btnQuickFinish').classList.remove('hidden');
+                document.getElementById('btnEndlessFinish').classList.remove('hidden');
+                document.getElementById('btnPrev').classList.add('hidden');
+                document.getElementById('quizModeBadge').innerText = feedbackMode === "instant" ? "ตรวจรายข้อ" : "ตรวจตอนจบ";
+                
+                loadNextEndlessQuestion();
+            } else {
+                // โหมดเรียง 1..N
+                sequentialQuestions = questionPool;
+                document.getElementById('quizModeBadge').innerText = feedbackMode === "instant" ? "เรียงข้อ • ตรวจรายข้อ" : "เรียงข้อ • ตรวจตอนท้าย";
+                loadSequentialQuestion(0);
+            }
         }
 
-        function loadQuestion(index) {
+        // ---------- Endless Mode Logic ----------
+        function loadNextEndlessQuestion() {
+            // สุ่มข้อใหม่โดยพยายามไม่ให้ซ้ำกับข้อเดิมล่าสุด
+            let available = questionPool.length > 1 
+                ? questionPool.filter(q => q.id !== lastEndlessQId) 
+                : questionPool;
+            
+            const randIdx = Math.floor(Math.random() * available.length);
+            currentEndlessQ = available[randIdx];
+            lastEndlessQId = currentEndlessQ.id;
+
+            const questionNumber = endlessHistory.length + 1;
+            document.getElementById('questionProgress').innerText = `ข้อที่สุ่มได้ #${questionNumber}`;
+            document.getElementById('questionText').innerHTML = `<span class="text-indigo-600 font-bold">โจทย์:</span> ${currentEndlessQ.question}`;
+            
+            updateEndlessBadge();
+
+            // เรนเดอร์ตัวเลือก
+            renderChoices(currentEndlessQ, null, (idx) => {
+                selectEndlessChoice(idx);
+            });
+
+            document.getElementById('instantFeedbackBox').classList.add('hidden');
+            document.getElementById('btnNext').disabled = true; // บังคับให้เลือกคำตอบก่อน
+            document.getElementById('btnNext').innerText = "สุ่มข้อถัดไป ❯";
+            document.getElementById('btnSubmit').classList.add('hidden');
+
+            renderMath();
+        }
+
+        function selectEndlessChoice(chosenIdx) {
+            const isCorrect = (chosenIdx === currentEndlessQ.correct_answer_index);
+            
+            // บันทึกประวัติ
+            endlessHistory.push({
+                q: currentEndlessQ,
+                chosen: chosenIdx,
+                correct: currentEndlessQ.correct_answer_index,
+                is_correct: isCorrect,
+                explanation: currentEndlessQ.explanation || ''
+            });
+
+            updateEndlessBadge();
+
+            // Re-render ตัวเลือกให้เห็นสถานะที่เลือก
+            renderChoices(currentEndlessQ, chosenIdx, null);
+
+            // Instant Feedback
+            if (feedbackMode === 'instant') {
+                showInstantFeedbackBox(currentEndlessQ, chosenIdx);
+            }
+
+            // ปลดล็อคปุ่มถัดไป
+            document.getElementById('btnNext').disabled = false;
+        }
+
+        function updateEndlessBadge() {
+            const total = endlessHistory.length;
+            const correct = endlessHistory.filter(h => h.is_correct).length;
+            document.getElementById('endlessStatsBadge').innerText = `ทำแล้ว: ${total} | ถูก: ${correct}`;
+        }
+
+        function confirmEndlessFinish() {
+            if (endlessHistory.length === 0) {
+                alert("คุณยังไม่ได้ทำข้อสอบเลยสักข้อ");
+                return;
+            }
+            if (confirm(`คุณทำไปแล้วทั้งหมด ${endlessHistory.length} ข้อ ต้องการจบการฝึกฝนและดูผลสรุปใช่หรือไม่?`)) {
+                finishEndlessPractice();
+            }
+        }
+
+        async function finishEndlessPractice() {
+            // ส่งผลคะแนนไปยังเซิร์ฟเวอร์
+            const studentName = document.getElementById('studentNameInput').value.trim() || "Anonymous Student";
+            const answersMap = {};
+            endlessHistory.forEach(h => {
+                answersMap[String(h.q.id)] = h.chosen;
+            });
+
+            await fetch('/api/submit', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    student_name: studentName,
+                    answers: answersMap
+                })
+            }).catch(e => console.error(e));
+
+            // แสดงหน้าสรุปผลของ Endless Mode
+            showEndlessResultView();
+        }
+
+        function showEndlessResultView() {
+            document.getElementById('viewQuiz').classList.add('hidden');
+            document.getElementById('btnQuickFinish').classList.add('hidden');
+            document.getElementById('viewResult').classList.remove('hidden');
+
+            const total = endlessHistory.length;
+            const correct = endlessHistory.filter(h => h.is_correct).length;
+            const percent = total > 0 ? Math.round((correct / total) * 100) : 0;
+
+            document.getElementById('finalScoreDisplay').innerText = `${correct} / ${total}`;
+            document.getElementById('accuracyRateText').innerText = `ความถูกต้องเฉลี่ย ${percent}% จากการทำทั้งหมด ${total} ข้อ`;
+
+            const reviewContainer = document.getElementById('summaryReviewList');
+            reviewContainer.innerHTML = '';
+
+            endlessHistory.forEach((h, idx) => {
+                const reviewItem = document.createElement('div');
+                reviewItem.className = `p-4 rounded-xl border text-sm space-y-2 ${h.is_correct ? 'bg-emerald-50/60 border-emerald-200' : 'bg-rose-50/60 border-rose-200'}`;
+                
+                reviewItem.innerHTML = `
+                    <div class="font-bold ${h.is_correct ? 'text-emerald-800' : 'text-rose-800'}">
+                        ข้อที่ทำ #${idx + 1}: ${h.is_correct ? '✓ ถูกต้อง' : '✗ ไม่ถูกต้อง'}
+                    </div>
+                    <div class="text-slate-800 font-medium">${h.q.question}</div>
+                    <div class="text-xs text-slate-600">
+                        คุณตอบ: <b>${['A','B','C','D'][h.chosen]}</b> | 
+                        เฉลย: <b class="text-emerald-700">${['A','B','C','D'][h.correct]}</b>
+                    </div>
+                    ${h.explanation ? `<div class="p-2.5 rounded bg-white border border-slate-200 text-xs text-slate-600">💡 <b>คำอธิบาย:</b> ${h.explanation}</div>` : ''}
+                `;
+                reviewContainer.appendChild(reviewItem);
+            });
+
+            renderMath();
+        }
+
+        // ---------- Sequential & Live Mode Logic ----------
+        function loadSequentialQuestion(index) {
             currentIndex = index;
-            const q = questions[currentIndex];
-            document.getElementById('questionProgress').innerText = `ข้อที่ ${currentIndex + 1} / ${questions.length}`;
+            const q = sequentialQuestions[currentIndex];
+            document.getElementById('questionProgress').innerText = `ข้อที่ ${currentIndex + 1} / ${sequentialQuestions.length}`;
             document.getElementById('questionText').innerHTML = `<span class="text-indigo-600 font-bold">ข้อ ${currentIndex + 1}:</span> ${q.question}`;
 
+            const chosen = userAnswers[q.id];
+            renderChoices(q, chosen, (idx) => {
+                userAnswers[q.id] = idx;
+                loadSequentialQuestion(currentIndex);
+            });
+
+            document.getElementById('btnPrev').disabled = (currentIndex === 0);
+            if (currentIndex === sequentialQuestions.length - 1) {
+                document.getElementById('btnNext').classList.add('hidden');
+                document.getElementById('btnSubmit').classList.remove('hidden');
+            } else {
+                document.getElementById('btnNext').classList.remove('hidden');
+                document.getElementById('btnSubmit').classList.add('hidden');
+                document.getElementById('btnNext').innerText = "ข้อถัดไป ▶";
+                document.getElementById('btnNext').disabled = false;
+            }
+
+            if (currentMode === 'self' && feedbackMode === 'instant' && chosen !== undefined) {
+                showInstantFeedbackBox(q, chosen);
+            } else {
+                document.getElementById('instantFeedbackBox').classList.add('hidden');
+            }
+
+            renderMath();
+        }
+
+        // Helper Render ตัวเลือก
+        function renderChoices(q, chosenIdx, onClickCallback) {
             const container = document.getElementById('choicesContainer');
             container.innerHTML = '';
-            
-            const chosen = userAnswers[q.id];
             const letters = ['A', 'B', 'C', 'D'];
 
             q.choices.forEach((ch, idx) => {
                 const btn = document.createElement('button');
                 btn.type = 'button';
-                const isSelected = chosen === idx;
+                const isSelected = chosenIdx === idx;
                 
                 btn.className = `w-full text-left p-3.5 rounded-xl border transition flex items-center gap-3 text-sm sm:text-base ${
                     isSelected ? 'border-indigo-600 bg-indigo-50/80 font-medium text-indigo-950 ring-2 ring-indigo-500/20' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
                 }`;
-                btn.onclick = () => selectChoice(idx);
+                if (onClickCallback) {
+                    btn.onclick = () => onClickCallback(idx);
+                }
 
                 btn.innerHTML = `
                     <span class="w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}">${letters[idx]}</span>
@@ -231,33 +450,9 @@
                 `;
                 container.appendChild(btn);
             });
-
-            document.getElementById('btnPrev').disabled = (currentIndex === 0);
-            if (currentIndex === questions.length - 1) {
-                document.getElementById('btnNext').classList.add('hidden');
-                document.getElementById('btnSubmit').classList.remove('hidden');
-            } else {
-                document.getElementById('btnNext').classList.remove('hidden');
-                document.getElementById('btnSubmit').classList.add('hidden');
-            }
-
-            const feedbackBox = document.getElementById('instantFeedbackBox');
-            if (currentMode === 'self' && feedbackMode === 'instant' && chosen !== undefined) {
-                showInstantFeedback(q, chosen);
-            } else {
-                feedbackBox.classList.add('hidden');
-            }
-
-            renderMath();
         }
 
-        function selectChoice(idx) {
-            const q = questions[currentIndex];
-            userAnswers[q.id] = idx;
-            loadQuestion(currentIndex);
-        }
-
-        function showInstantFeedback(q, chosenIdx) {
+        function showInstantFeedbackBox(q, chosenIdx) {
             const feedbackBox = document.getElementById('instantFeedbackBox');
             feedbackBox.classList.remove('hidden');
             const isCorrect = chosenIdx === q.correct_answer_index;
@@ -278,18 +473,26 @@
             renderMath();
         }
 
-        function prevQuestion() {
-            if (currentIndex > 0) loadQuestion(currentIndex - 1);
+        function nextQuestion() {
+            if (practiceType === 'endless') {
+                loadNextEndlessQuestion();
+            } else {
+                if (currentIndex < sequentialQuestions.length - 1) {
+                    loadSequentialQuestion(currentIndex + 1);
+                }
+            }
         }
 
-        function nextQuestion() {
-            if (currentIndex < questions.length - 1) loadQuestion(currentIndex + 1);
+        function prevQuestion() {
+            if (practiceType === 'sequential' && currentIndex > 0) {
+                loadSequentialQuestion(currentIndex - 1);
+            }
         }
 
         async function submitExam() {
             const answeredCount = Object.keys(userAnswers).length;
-            if (answeredCount < questions.length) {
-                if (!confirm(`คุณทำไปแล้ว ${answeredCount} จาก ${questions.length} ข้อ ยืนยันการส่งคำตอบหรือไม่?`)) return;
+            if (answeredCount < sequentialQuestions.length) {
+                if (!confirm(`คุณทำไปแล้ว ${answeredCount} จาก ${sequentialQuestions.length} ข้อ ยืนยันการส่งคำตอบหรือไม่?`)) return;
             }
 
             const studentName = document.getElementById('studentNameInput').value.trim() || "Anonymous Student";
@@ -305,7 +508,7 @@
                 });
                 const data = await res.json();
                 if (data.status === 'success') {
-                    showResultView(data);
+                    showSequentialResultView(data);
                 } else {
                     alert('เกิดข้อผิดพลาดในการส่งคำตอบ');
                 }
@@ -315,7 +518,7 @@
             }
         }
 
-        function showResultView(resultData) {
+        function showSequentialResultView(resultData) {
             clearInterval(timerInterval);
             document.getElementById('viewQuiz').classList.add('hidden');
             document.getElementById('liveTimerBox').classList.add('hidden');
@@ -323,16 +526,19 @@
 
             const details = resultData ? resultData.details : {};
             const score = resultData ? resultData.score : 0;
-            const total = resultData ? resultData.total : questions.length;
+            const total = resultData ? resultData.total : sequentialQuestions.length;
+            const percent = total > 0 ? Math.round((score / total) * 100) : 0;
+
+            document.getElementById('finalScoreDisplay').innerText = `${score} / ${total}`;
+            document.getElementById('accuracyRateText').innerText = `ความถูกต้องเฉลี่ย ${percent}%`;
 
             const reviewContainer = document.getElementById('summaryReviewList');
             reviewContainer.innerHTML = '';
 
-            questions.forEach((q, idx) => {
+            sequentialQuestions.forEach((q, idx) => {
                 const qIdStr = String(q.id);
                 const itemResult = details[qIdStr] || {};
                 
-                // ดึงข้อมูลผลลัพธ์ที่ Server ประมวลผลส่งกลับมา
                 const userChoice = itemResult.chosen !== undefined ? itemResult.chosen : userAnswers[q.id];
                 const correctChoice = itemResult.correct !== undefined ? itemResult.correct : q.correct_answer_index;
                 const isCorrect = itemResult.is_correct !== undefined ? itemResult.is_correct : (userChoice === correctChoice);
@@ -355,7 +561,6 @@
                 reviewContainer.appendChild(reviewItem);
             });
 
-            document.getElementById('finalScoreDisplay').innerText = `${score} / ${total}`;
             renderMath();
         }
 
