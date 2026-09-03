@@ -11,12 +11,11 @@ from fastapi.templating import Jinja2Templates
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
-app = FastAPI(title="MathQuiz Live & Self-Paced Web App")
+app = FastAPI(title="MathQuiz - Minimal Live Exam")
 
-# ==================== In-Memory State ====================
-class QuizState:
+# ==================== Core In-Memory State ====================
+class LiveQuizState:
     def __init__(self):
-        # เริ่มต้นไม่มีข้อสอบ Mock ในระบบ (ต้องรอ Upload จากไฟล์ JSON เท่านั้น)
         self.raw_quiz: Optional[Dict[str, Any]] = None
         self.is_live: bool = False
         self.live_duration_seconds: int = 0
@@ -31,15 +30,15 @@ class QuizState:
         self.submissions = []
         self.live_shuffled_questions = []
 
-    def start_live(self, duration_minutes: int):
-        if not self.raw_quiz or "questions" not in self.raw_quiz or len(self.raw_quiz["questions"]) == 0:
+    def start_live(self, duration_minutes: int) -> bool:
+        if not self.raw_quiz or not self.raw_quiz.get("questions"):
             return False
         self.is_live = True
         self.live_duration_seconds = duration_minutes * 60
         self.start_timestamp = time.time()
         self.submissions = []
         
-        # สุ่มลำดับข้อสอบ 1 ชุด สำหรับใช้ร่วมกันตอนสอบ Live
+        # สุ่มลำดับข้อสอบ 1 ลำดับ เพื่อให้นักเรียนทุกคนเห็นโจทย์เรียงเหมือนกัน
         shuffled = list(self.raw_quiz["questions"])
         random.shuffle(shuffled)
         self.live_shuffled_questions = shuffled
@@ -89,29 +88,27 @@ class QuizState:
             "submitted_at": time.time()
         })
         
-        return {
-            "score": score,
-            "total": len(questions),
-            "details": details
-        }
+        return {"score": score, "total": len(questions), "details": details}
 
     def get_analytics(self) -> Dict[str, Any]:
         if not self.raw_quiz or not self.submissions:
             total_q = len(self.raw_quiz["questions"]) if self.raw_quiz else 0
             return {
                 "total_students": len(self.submissions),
-                "histogram": {"labels": [f"{i} คะแนน" for i in range(total_q + 1)], "data": [0]*(total_q + 1)},
+                "histogram": {"labels": [f"{i}" for i in range(total_q + 1)], "data": [0]*(total_q + 1)},
                 "error_ranking": []
             }
         
         total_q = len(self.raw_quiz["questions"])
         scores = [sub["score"] for sub in self.submissions]
         
+        # 1. Histogram ความถี่คะแนน
         hist_data = [0] * (total_q + 1)
         for s in scores:
             if 0 <= s <= total_q:
                 hist_data[s] += 1
                 
+        # 2. วิเคราะห์ข้อที่ตอบผิด (Item Analysis)
         q_stats = {}
         for q in self.raw_quiz["questions"]:
             q_id = str(q["id"])
@@ -153,16 +150,13 @@ class QuizState:
 
         return {
             "total_students": len(self.submissions),
-            "histogram": {
-                "labels": [f"{i} คะแนน" for i in range(total_q + 1)],
-                "data": hist_data
-            },
+            "histogram": {"labels": [f"{i} คะแนน" for i in range(total_q + 1)], "data": hist_data},
             "error_ranking": error_ranking
         }
 
-state = QuizState()
+state = LiveQuizState()
 
-# ==================== Routes ====================
+# ==================== Page Routes ====================
 @app.get("/", response_class=HTMLResponse)
 async def student_page(request: Request):
     return templates.TemplateResponse(request=request, name="student.html")
@@ -171,104 +165,73 @@ async def student_page(request: Request):
 async def teacher_page(request: Request):
     return templates.TemplateResponse(request=request, name="teacher.html")
 
+# ==================== API Endpoints ====================
 @app.get("/api/template")
 async def get_template():
     template_data = {
-        "quiz_title": "ใส่ชื่อชุดข้อสอบที่นี่",
+        "quiz_title": "ใส่ชื่อชุดข้อสอบ",
         "time_limit_minutes": 15,
         "questions": [
             {
                 "id": 1,
-                "question": "โจทย์ข้อที่ 1 ใส่สูตรคณิตศาสตร์ด้วย LaTeX เช่น $\\sqrt{x^2 + y^2}$",
-                "choices": ["ตัวเลือก 1", "ตัวเลือก 2", "ตัวเลือก 3", "ตัวเลือก 4"],
+                "question": "จงคำนวณค่าของ $\\sqrt{144} + 5^2$",
+                "choices": ["$37$", "$39$", "$24$", "$17$"],
                 "correct_answer_index": 0,
-                "explanation": "อธิบายเหตุผลว่าทำไมตัวเลือกที่ 1 ถูก และตัวเลือกอื่นผิด พร้อมสูตร $\\int f(x) dx$"
+                "explanation": "เพราะ $\\sqrt{144} = 12$ และ $5^2 = 25$ ดังนั้น $12 + 25 = 37$"
             }
         ]
     }
-    return JSONResponse(
-        content=template_data,
-        headers={"Content-Disposition": "attachment; filename=quiz_template.json"}
-    )
+    return JSONResponse(content=template_data, headers={"Content-Disposition": "attachment; filename=quiz_template.json"})
 
 @app.post("/api/upload")
 async def upload_quiz(file: UploadFile = File(...)):
     try:
         content = await file.read()
         quiz_data = json.loads(content.decode("utf-8"))
-        
         if "questions" not in quiz_data or len(quiz_data["questions"]) == 0:
-            return JSONResponse(status_code=400, content={"status": "error", "message": "ไฟล์ JSON ไม่มีรายการข้อสอบ"})
-            
+            return JSONResponse(status_code=400, content={"status": "error", "message": "ไฟล์ JSON ไม่มีคำถาม"})
         state.set_quiz(quiz_data)
         await notify_teachers({"type": "QUIZ_UPDATED", "quiz": quiz_data})
-        return {
-            "status": "success", 
-            "message": "อัปโหลดชุดโจทย์เรียบร้อยแล้ว", 
-            "title": quiz_data.get("quiz_title"),
-            "count": len(quiz_data.get("questions", []))
-        }
+        return {"status": "success", "title": quiz_data.get("quiz_title"), "count": len(quiz_data["questions"])}
     except Exception as e:
         return JSONResponse(status_code=400, content={"status": "error", "message": str(e)})
 
 @app.get("/api/quiz-status")
 async def quiz_status():
-    remaining = state.get_remaining_seconds()
     has_quiz = (state.raw_quiz is not None) and (len(state.raw_quiz.get("questions", [])) > 0)
     return {
         "has_quiz": has_quiz,
         "is_live": state.is_live,
-        "remaining_seconds": remaining,
+        "remaining_seconds": state.get_remaining_seconds(),
         "quiz_title": state.raw_quiz.get("quiz_title", "") if has_quiz else "",
         "total_questions": len(state.raw_quiz.get("questions", [])) if has_quiz else 0,
-        "time_limit_minutes": state.raw_quiz.get("time_limit_minutes", 15) if has_quiz else 15
+        "time_limit_minutes": state.raw_quiz.get("time_limit_minutes", 10) if has_quiz else 10
     }
 
 @app.get("/api/get-quiz")
-async def get_quiz(mode: str = "self", order: str = "sequential"):
-    if not state.raw_quiz or not state.raw_quiz.get("questions"):
-        return JSONResponse(status_code=404, content={"has_quiz": False, "message": "ยังไม่มีการอัปโหลดชุดข้อสอบ"})
+async def get_quiz():
+    if not state.is_live or not state.live_shuffled_questions:
+        return JSONResponse(status_code=400, content={"message": "ยังไม่เปิดให้ทำข้อสอบ"})
     
-    # โหมด Live สอบสด
-    if state.is_live:
-        clean_questions = []
-        for q in state.live_shuffled_questions:
-            clean_questions.append({
-                "id": q["id"],
-                "question": q["question"],
-                "choices": q["choices"]
-            })
-        return {
-            "has_quiz": True,
-            "mode": "live",
-            "quiz_title": state.raw_quiz["quiz_title"],
-            "time_limit": state.get_remaining_seconds(),
-            "questions": clean_questions
-        }
-    
-    # โหมด Self-Paced
-    questions = list(state.raw_quiz["questions"])
-    if order == "random":
-        random.shuffle(questions)
-        
+    # ส่งข้อสอบแบบซ่อนเฉลย (Security by Design)
+    clean_questions = [
+        {"id": q["id"], "question": q["question"], "choices": q["choices"]}
+        for q in state.live_shuffled_questions
+    ]
     return {
-        "has_quiz": True,
-        "mode": "self",
         "quiz_title": state.raw_quiz["quiz_title"],
-        "questions": questions
+        "time_limit": state.get_remaining_seconds(),
+        "questions": clean_questions
     }
 
 @app.post("/api/start-timer")
 async def start_timer(request: Request):
-    if not state.raw_quiz or not state.raw_quiz.get("questions"):
-        return JSONResponse(status_code=400, content={"status": "error", "message": "กรุณาอัปโหลดชุดข้อสอบ JSON ก่อนเริ่มการสอบ"})
-        
     data = await request.json()
-    duration = int(data.get("duration", state.raw_quiz.get("time_limit_minutes", 10)))
+    duration = int(data.get("duration", 10))
     if state.start_live(duration):
         await notify_teachers({"type": "SESSION_STARTED", "duration": duration * 60})
-        return {"status": "success", "duration_seconds": duration * 60}
-    return JSONResponse(status_code=400, content={"status": "error", "message": "ไม่สามารถเริ่มการสอบได้"})
+        return {"status": "success"}
+    return JSONResponse(status_code=400, content={"status": "error", "message": "ไม่สามารถเริ่มสอบได้ (ยังไม่ได้อัปโหลดข้อสอบ)"})
 
 @app.post("/api/stop-timer")
 async def stop_timer():
@@ -278,36 +241,28 @@ async def stop_timer():
 
 @app.post("/api/submit")
 async def submit_quiz(request: Request):
-    if not state.raw_quiz:
-        return JSONResponse(status_code=400, content={"status": "error", "message": "ไม่พบชุดข้อสอบในระบบ"})
-        
     data = await request.json()
     name = data.get("student_name", "Anonymous")
     answers = data.get("answers", {})
     result = state.add_submission(name, answers)
     
+    # ส่งสัญญาณอัปเดตสถิติให้อาจารย์ทันที
     analytics = state.get_analytics()
     await notify_teachers({"type": "NEW_SUBMISSION", "analytics": analytics})
-    return {
-        "status": "success",
-        "score": result["score"],
-        "total": result["total"],
-        "details": result["details"]
-    }
+    return {"status": "success", **result}
 
-# ==================== WebSocket ====================
+# ==================== Real-time WebSocket ====================
 @app.websocket("/ws/teacher")
 async def ws_teacher_endpoint(websocket: WebSocket):
     await websocket.accept()
     state.connected_teachers.append(websocket)
     try:
-        analytics = state.get_analytics()
         init_data = {
             "type": "INIT",
             "is_live": state.is_live,
             "remaining_seconds": state.get_remaining_seconds(),
             "quiz": state.raw_quiz,
-            "analytics": analytics
+            "analytics": state.get_analytics()
         }
         await websocket.send_text(json.dumps(init_data))
         while True:
@@ -316,15 +271,12 @@ async def ws_teacher_endpoint(websocket: WebSocket):
         state.connected_teachers.remove(websocket)
 
 async def notify_teachers(message: dict):
-    disconnected = []
     text_data = json.dumps(message)
-    for ws in state.connected_teachers:
+    for ws in list(state.connected_teachers):
         try:
             await ws.send_text(text_data)
         except Exception:
-            disconnected.append(ws)
-    for ws in disconnected:
-        state.connected_teachers.remove(ws)
+            state.connected_teachers.remove(ws)
 
 if __name__ == "__main__":
     import uvicorn

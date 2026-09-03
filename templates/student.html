@@ -3,142 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>แบบฝึกหัดคณิตศาสตร์ - MathQuiz</title>
-    <!-- Tailwind CSS -->
+    <title>MathQuiz - ห้องสอบสด</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- KaTeX สำหรับ Render LaTeX -->
+    <!-- KaTeX สำหรับแสดงผล LaTeX -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
-    <style>
-        .katex { font-size: 1.15em; }
-    </style>
+    <style>.katex { font-size: 1.15em; }</style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col items-center">
 
     <!-- Header -->
     <header class="w-full bg-white shadow-sm border-b border-slate-200 py-3.5 px-4 sticky top-0 z-40">
         <div class="max-w-3xl mx-auto flex justify-between items-center">
-            <div class="font-bold text-lg text-indigo-700 flex items-center gap-2">
-                <span>📐 MathQuiz</span>
-                <span id="headerBadge" class="text-xs font-medium px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">โหมดฝึกซ้อม</span>
-            </div>
-            <div id="liveTimerBox" class="hidden flex items-center gap-2 text-rose-600 font-mono font-bold text-lg">
+            <div class="font-bold text-lg text-indigo-700">📐 MathQuiz</div>
+            <div id="timerBox" class="hidden flex items-center gap-1.5 text-rose-600 font-mono font-bold text-lg">
                 <span>⏳</span>
-                <span id="studentTimer">00:00</span>
+                <span id="timerDisplay">00:00</span>
             </div>
-            <button id="btnQuickFinish" onclick="confirmEndlessFinish()" class="hidden px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition">
-                ⏹ พอแล้ว / สรุปผล
-            </button>
         </div>
     </header>
 
     <div class="w-full max-w-3xl p-4 sm:p-6 my-auto">
 
-        <!-- ================= 1. หน้า Lobby (ตั้งค่าก่อนเริ่ม) ================= -->
-        <div id="viewLobby" class="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+        <!-- 1. หน้ารออาจารย์เปิดการสอบ (Waiting Screen) -->
+        <div id="viewWaiting" class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center space-y-4">
+            <div class="text-4xl animate-bounce">⏳</div>
+            <h2 class="text-2xl font-bold text-slate-800">รออาจารย์เปิดระบบการสอบ</h2>
+            <p id="waitingStatusText" class="text-sm text-slate-500">ระบบจะนำเข้าสู่ข้อสอบอัตโนมัติทันทีที่อาจารย์กดเริ่มเวลา</p>
             
-            <!-- กรณีไม่มีข้อสอบในระบบ -->
-            <div id="noQuizWarning" class="hidden p-5 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 space-y-2 text-center">
-                <div class="text-2xl">⚠️</div>
-                <div class="font-bold text-base">ยังไม่มีชุดข้อสอบในระบบ</div>
-                <div class="text-xs text-amber-700">กรุณาแจ้งให้อาจารย์ทำการอัปโหลดไฟล์ข้อสอบ JSON ที่หน้าจออาจารย์ก่อน</div>
-                <button onclick="checkStatus()" class="mt-2 text-xs bg-amber-200 hover:bg-amber-300 text-amber-900 font-semibold px-3 py-1.5 rounded-md transition">
-                    🔄 กดเพื่อตรวจสอบอีกครั้ง
-                </button>
-            </div>
-
-            <!-- กล่องแสดงชื่อชุดข้อสอบที่ดึงมาจาก Server -->
-            <div id="quizMetaBox" class="text-center space-y-1">
-                <h2 id="lobbyQuizTitle" class="text-2xl font-bold text-slate-800">กำลังตรวจสอบข้อสอบ...</h2>
-                <p id="lobbyQuizCount" class="text-sm font-medium text-indigo-600"></p>
-            </div>
-
-            <div id="lobbyControls" class="space-y-4 pt-2">
-                <div>
-                    <label class="block text-sm font-semibold text-slate-700 mb-1">ชื่อผู้ทำแบบฝึกหัด:</label>
-                    <input type="text" id="studentNameInput" placeholder="ระบุชื่อหรือรหัสนักเรียน" class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div class="p-4 rounded-xl border border-slate-200 bg-slate-50">
-                        <label class="block text-sm font-semibold text-slate-700 mb-2">🔀 รูปแบบการทำ</label>
-                        <div class="space-y-2 text-sm">
-                            <label class="flex items-start gap-2.5 cursor-pointer">
-                                <input type="radio" name="optOrder" value="endless" checked class="mt-1 text-indigo-600 focus:ring-indigo-500">
-                                <div>
-                                    <div class="font-medium text-indigo-900">สุ่มทำไปเรื่อยๆ (Endless) 🎲</div>
-                                    <div class="text-xs text-slate-500">สุ่มโจทย์วนทำไม่ซ้ำข้อจนครบชุด และทำต่อได้เรื่อยๆ จนกว่าจะกดหยุดเอง</div>
-                                </div>
-                            </label>
-                            <label class="flex items-start gap-2.5 cursor-pointer pt-2 border-t border-slate-200">
-                                <input type="radio" name="optOrder" value="sequential" class="mt-1 text-indigo-600 focus:ring-indigo-500">
-                                <div>
-                                    <div class="font-medium text-slate-800">เรียงข้อ 1 ถึงข้อสุดท้าย</div>
-                                    <div class="text-xs text-slate-500">ทำเรียงตามลำดับข้อสอบจนครบชุด</div>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="p-4 rounded-xl border border-slate-200 bg-slate-50">
-                        <label class="block text-sm font-semibold text-slate-700 mb-2">💡 การตรวจ & เฉลย</label>
-                        <div class="space-y-2 text-sm">
-                            <label class="flex items-start gap-2.5 cursor-pointer">
-                                <input type="radio" name="optFeedback" value="instant" checked class="mt-1 text-indigo-600 focus:ring-indigo-500">
-                                <div>
-                                    <div class="font-medium text-indigo-900">ตรวจทันทีรายข้อ</div>
-                                    <div class="text-xs text-slate-500">ตอบปุ๊บบอกเฉลยและวิธีคิดทันที</div>
-                                </div>
-                            </label>
-                            <label class="flex items-start gap-2.5 cursor-pointer pt-2 border-t border-slate-200">
-                                <input type="radio" name="optFeedback" value="summary" class="mt-1 text-indigo-600 focus:ring-indigo-500">
-                                <div>
-                                    <div class="font-medium text-slate-800">ดูสรุปตอนสุดท้ายทีเดียว</div>
-                                    <div class="text-xs text-slate-500">ทำต่อเนื่องแล้วตรวจพร้อมกันตอนจบ</div>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <button id="btnStartPractice" onclick="startPractice()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-sm transition text-base">
-                    เข้าสู่แบบฝึกหัด 🚀
-                </button>
+            <div class="pt-4 max-w-xs mx-auto text-left">
+                <label class="block text-xs font-semibold text-slate-600 mb-1">ระบุชื่อหรือรหัสนักเรียน:</label>
+                <input type="text" id="studentNameInput" placeholder="เช่น สมชาย ใจดี" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
             </div>
         </div>
 
-        <!-- ================= 2. หน้ากำลังทำข้อสอบ (Quiz Screen) ================= -->
+        <!-- 2. หน้าทำข้อสอบสด (Live Exam Screen) -->
         <div id="viewQuiz" class="hidden bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
             <div class="flex justify-between items-center pb-3 border-b border-slate-100">
-                <span class="text-sm font-bold text-indigo-600" id="questionProgress">ข้อที่ 1</span>
-                <div class="flex items-center gap-2">
-                    <span id="endlessStatsBadge" class="hidden text-xs bg-indigo-50 text-indigo-700 font-semibold px-2.5 py-1 rounded-full border border-indigo-100">
-                        ทำแล้ว: 0 | ถูก: 0
-                    </span>
-                    <span id="quizModeBadge" class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">
-                        โหมดฝึกซ้อม
-                    </span>
-                </div>
+                <span class="text-sm font-bold text-indigo-600" id="questionProgress">ข้อที่ 1 / 10</span>
+                <span class="text-xs bg-rose-100 text-rose-700 font-semibold px-2.5 py-0.5 rounded-full animate-pulse">● กำลังสอบสด</span>
             </div>
 
-            <div id="questionText" class="text-lg sm:text-xl font-medium text-slate-800 leading-relaxed min-h-[60px]">
-                กำลังโหลดโจทย์...
-            </div>
-
+            <div id="questionText" class="text-lg sm:text-xl font-medium text-slate-800 leading-relaxed min-h-[50px]"></div>
             <div id="choicesContainer" class="space-y-3"></div>
 
-            <div id="instantFeedbackBox" class="hidden p-4 rounded-xl text-sm leading-relaxed space-y-2"></div>
-
-            <!-- ปุ่มควบคุมด้านล่าง -->
             <div class="flex justify-between items-center pt-4 border-t border-slate-100">
                 <button id="btnPrev" onclick="prevQuestion()" class="px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition disabled:opacity-40" disabled>
                     ◀ ข้อย้อนหลัง
                 </button>
                 <div class="flex gap-2">
-                    <button id="btnEndlessFinish" onclick="confirmEndlessFinish()" class="hidden px-4 py-2 text-sm font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition border border-rose-200">
-                        ⏹ จบการฝึกฝน
-                    </button>
                     <button id="btnNext" onclick="nextQuestion()" class="px-5 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition shadow-sm">
                         ข้อถัดไป ▶
                     </button>
@@ -149,40 +63,24 @@
             </div>
         </div>
 
-        <!-- ================= 3. หน้าสรุปผลคะแนน & เฉลยรวม ================= -->
+        <!-- 3. หน้าสรุปผลคะแนน & เฉลย (Result View) -->
         <div id="viewResult" class="hidden bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
             <div class="text-center space-y-2">
                 <div class="text-4xl">🎉</div>
-                <h2 class="text-2xl font-bold text-slate-800">สรุปผลการทำแบบฝึกหัด</h2>
-                <div class="text-3xl font-extrabold text-indigo-600" id="finalScoreDisplay">
-                    0 / 0
-                </div>
-                <p id="accuracyRateText" class="text-sm font-medium text-slate-500">ความถูกต้อง 0%</p>
+                <h2 class="text-2xl font-bold text-slate-800">ส่งคำตอบเรียบร้อยแล้ว</h2>
+                <div class="text-3xl font-extrabold text-indigo-600" id="finalScoreDisplay">0 / 0</div>
+                <p class="text-xs text-slate-400">ผลคะแนนส่งไปยังหน้าจอของอาจารย์เรียบร้อยแล้ว</p>
             </div>
-
             <div id="summaryReviewList" class="space-y-4 pt-4 border-t border-slate-100"></div>
-
-            <button onclick="location.reload()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition text-sm shadow-sm">
-                ↺ ทำแบบฝึกหัดใหม่อีกครั้ง
-            </button>
         </div>
 
     </div>
 
     <script>
-        let currentMode = "self";
-        let practiceType = "endless";
-        let feedbackMode = "instant";
-        
-        let questionPool = []; // คลังข้อสอบทั้งหมดจากไฟล์ JSON
-        let endlessDeck = [];  // สำรับสุ่มข้อสอบ (เพื่อป้องกันข้อซ้ำ)
-        let sequentialQuestions = [];
+        let questions = [];
         let currentIndex = 0;
-        
-        let endlessHistory = [];
-        let currentEndlessQ = null;
         let userAnswers = {};
-
+        let pollInterval = null;
         let timerInterval = null;
         let remainingSeconds = 0;
 
@@ -200,404 +98,137 @@
             }
         }
 
-        // ตรวจสอบกับ Server ว่ามีชุดข้อสอบที่อัปโหลดไว้หรือไม่
+        // คอยตรวจสอบสถานะการเปิดสอบจากอาจารย์
         async function checkStatus() {
             try {
                 const res = await fetch('/api/quiz-status');
                 const data = await res.json();
                 
-                const noQuizWarning = document.getElementById('noQuizWarning');
-                const btnStart = document.getElementById('btnStartPractice');
-                const lobbyControls = document.getElementById('lobbyControls');
-
-                if (!data.has_quiz) {
-                    noQuizWarning.classList.remove('hidden');
-                    document.getElementById('lobbyQuizTitle').innerText = "ยังไม่มีชุดข้อสอบ";
-                    document.getElementById('lobbyQuizCount').innerText = "";
-                    btnStart.disabled = true;
-                    return;
-                }
-
-                // มีข้อสอบในระบบ
-                noQuizWarning.classList.add('hidden');
-                btnStart.disabled = false;
-                document.getElementById('lobbyQuizTitle').innerText = data.quiz_title || "แบบฝึกหัดคณิตศาสตร์";
-                document.getElementById('lobbyQuizCount').innerText = `คลังข้อสอบทั้งหมด: ${data.total_questions} ข้อ`;
-
-                if (data.is_live) {
-                    currentMode = "live";
-                    document.getElementById('headerBadge').innerText = "โหมดสอบสด (Live)";
-                    document.getElementById('headerBadge').className = "text-xs font-semibold px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 animate-pulse";
-                    loadLiveQuiz(data.remaining_seconds);
-                } else {
-                    currentMode = "self";
+                if (data.is_live && questions.length === 0) {
+                    clearInterval(pollInterval);
+                    startExam(data.remaining_seconds);
+                } else if (!data.is_live && questions.length === 0) {
+                    document.getElementById('waitingStatusText').innerText = data.has_quiz 
+                        ? `ชุดข้อสอบ "${data.quiz_title}" (${data.total_questions} ข้อ) - รออาจารย์เริ่มจับเวลา`
+                        : "ยังไม่มีชุดข้อสอบในระบบ กรุณารออาจารย์อัปโหลดไฟล์ข้อสอบ";
                 }
             } catch (err) {
                 console.error(err);
-                document.getElementById('lobbyQuizTitle').innerText = "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้";
             }
         }
 
-        // 1. Live Mode
-        async function loadLiveQuiz(timeLeft) {
-            const res = await fetch('/api/get-quiz?mode=live');
+        async function startExam(timeLeft) {
+            const res = await fetch('/api/get-quiz');
             const data = await res.json();
-            if (!data.has_quiz) return;
+            questions = data.questions;
 
-            sequentialQuestions = data.questions;
-            practiceType = "sequential";
-            feedbackMode = "summary";
-            
-            document.getElementById('viewLobby').classList.add('hidden');
+            document.getElementById('viewWaiting').classList.add('hidden');
             document.getElementById('viewQuiz').classList.remove('hidden');
-            document.getElementById('liveTimerBox').classList.remove('hidden');
-            document.getElementById('quizModeBadge').innerText = "กำลังสอบสด";
+            document.getElementById('timerBox').classList.remove('hidden');
 
-            startLiveTimer(timeLeft);
-            loadSequentialQuestion(0);
+            startCountdown(timeLeft);
+            loadQuestion(0);
         }
 
-        // 2. Self-Paced Mode
-        async function startPractice() {
-            practiceType = document.querySelector('input[name="optOrder"]:checked').value;
-            feedbackMode = document.querySelector('input[name="optFeedback"]:checked').value;
-
-            // Fetch ชุดข้อสอบจริงจาก Server
-            const res = await fetch('/api/get-quiz?mode=self&order=sequential');
-            const data = await res.json();
-            
-            if (!data.has_quiz || !data.questions || data.questions.length === 0) {
-                alert("ไม่พบข้อสอบในระบบ กรุณารออาจารย์อัปโหลดไฟล์ JSON");
-                return;
-            }
-
-            questionPool = data.questions;
-
-            document.getElementById('viewLobby').classList.add('hidden');
-            document.getElementById('viewQuiz').classList.remove('hidden');
-
-            if (practiceType === 'endless') {
-                document.getElementById('headerBadge').innerText = "โหมดสุ่มต่อเนื่อง (Endless)";
-                document.getElementById('headerBadge').className = "text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700";
-                document.getElementById('endlessStatsBadge').classList.remove('hidden');
-                document.getElementById('btnQuickFinish').classList.remove('hidden');
-                document.getElementById('btnEndlessFinish').classList.remove('hidden');
-                document.getElementById('btnPrev').classList.add('hidden');
-                document.getElementById('quizModeBadge').innerText = feedbackMode === "instant" ? "ตรวจรายข้อ" : "ตรวจตอนจบ";
-                
-                // สร้างสำรับสุ่มใบแรก
-                endlessDeck = [];
-                loadNextEndlessQuestion();
-            } else {
-                sequentialQuestions = questionPool;
-                document.getElementById('quizModeBadge').innerText = feedbackMode === "instant" ? "เรียงข้อ • ตรวจรายข้อ" : "เรียงข้อ • ตรวจตอนท้าย";
-                loadSequentialQuestion(0);
-            }
-        }
-
-        // ---------- Deck System: สุ่มข้อสอบแบบสำรับไพ่ (ไม่ซ้ำจนกว่าจะครบ 30 ข้อ) ----------
-        function loadNextEndlessQuestion() {
-            // ถ้าสำรับหมด ให้สร้างสำรับใหม่โดยสับข้อสอบทั้ง 30 ข้อใหม่
-            if (endlessDeck.length === 0) {
-                endlessDeck = [...questionPool];
-                // Fisher-Yates Shuffle
-                for (let i = endlessDeck.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [endlessDeck[i], endlessDeck[j]] = [endlessDeck[j], endlessDeck[i]];
-                }
-            }
-
-            // จั่วข้อถัดไปออกจากสำรับ
-            currentEndlessQ = endlessDeck.pop();
-
-            const questionNumber = endlessHistory.length + 1;
-            document.getElementById('questionProgress').innerText = `ข้อที่สุ่มได้ #${questionNumber} (จากคลัง ${questionPool.length} ข้อ)`;
-            document.getElementById('questionText').innerHTML = `<span class="text-indigo-600 font-bold">โจทย์:</span> ${currentEndlessQ.question}`;
-            
-            updateEndlessBadge();
-
-            renderChoices(currentEndlessQ, null, (idx) => {
-                selectEndlessChoice(idx);
-            });
-
-            document.getElementById('instantFeedbackBox').classList.add('hidden');
-            document.getElementById('btnNext').disabled = true; // บังคับให้ตอบก่อนกดถัดไป
-            document.getElementById('btnNext').innerText = "สุ่มข้อถัดไป ❯";
-            document.getElementById('btnSubmit').classList.add('hidden');
-
-            renderMath();
-        }
-
-        function selectEndlessChoice(chosenIdx) {
-            const isCorrect = (chosenIdx === currentEndlessQ.correct_answer_index);
-            
-            endlessHistory.push({
-                q: currentEndlessQ,
-                chosen: chosenIdx,
-                correct: currentEndlessQ.correct_answer_index,
-                is_correct: isCorrect,
-                explanation: currentEndlessQ.explanation || ''
-            });
-
-            updateEndlessBadge();
-            renderChoices(currentEndlessQ, chosenIdx, null);
-
-            if (feedbackMode === 'instant') {
-                showInstantFeedbackBox(currentEndlessQ, chosenIdx);
-            }
-
-            document.getElementById('btnNext').disabled = false;
-        }
-
-        function updateEndlessBadge() {
-            const total = endlessHistory.length;
-            const correct = endlessHistory.filter(h => h.is_correct).length;
-            document.getElementById('endlessStatsBadge').innerText = `ทำแล้ว: ${total} | ถูก: ${correct}`;
-        }
-
-        function confirmEndlessFinish() {
-            if (endlessHistory.length === 0) {
-                alert("คุณยังไม่ได้ทำข้อสอบเลยสักข้อ");
-                return;
-            }
-            if (confirm(`คุณทำแบบฝึกหัดไปแล้วทั้งหมด ${endlessHistory.length} ข้อ ยืนยันการจบการฝึกฝนและดูผลสรุปหรือไม่?`)) {
-                finishEndlessPractice();
-            }
-        }
-
-        async function finishEndlessPractice() {
-            const studentName = document.getElementById('studentNameInput').value.trim() || "Anonymous Student";
-            const answersMap = {};
-            endlessHistory.forEach(h => {
-                answersMap[String(h.q.id)] = h.chosen;
-            });
-
-            await fetch('/api/submit', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    student_name: studentName,
-                    answers: answersMap
-                })
-            }).catch(e => console.error(e));
-
-            showEndlessResultView();
-        }
-
-        function showEndlessResultView() {
-            document.getElementById('viewQuiz').classList.add('hidden');
-            document.getElementById('btnQuickFinish').classList.add('hidden');
-            document.getElementById('viewResult').classList.remove('hidden');
-
-            const total = endlessHistory.length;
-            const correct = endlessHistory.filter(h => h.is_correct).length;
-            const percent = total > 0 ? Math.round((correct / total) * 100) : 0;
-
-            document.getElementById('finalScoreDisplay').innerText = `${correct} / ${total}`;
-            document.getElementById('accuracyRateText').innerText = `ความถูกต้องเฉลี่ย ${percent}% จากการทำทั้งหมด ${total} ข้อ`;
-
-            const reviewContainer = document.getElementById('summaryReviewList');
-            reviewContainer.innerHTML = '';
-
-            endlessHistory.forEach((h, idx) => {
-                const reviewItem = document.createElement('div');
-                reviewItem.className = `p-4 rounded-xl border text-sm space-y-2 ${h.is_correct ? 'bg-emerald-50/60 border-emerald-200' : 'bg-rose-50/60 border-rose-200'}`;
-                
-                reviewItem.innerHTML = `
-                    <div class="font-bold ${h.is_correct ? 'text-emerald-800' : 'text-rose-800'}">
-                        ข้อที่ทำ #${idx + 1}: ${h.is_correct ? '✓ ถูกต้อง' : '✗ ไม่ถูกต้อง'}
-                    </div>
-                    <div class="text-slate-800 font-medium">${h.q.question}</div>
-                    <div class="text-xs text-slate-600">
-                        คุณตอบ: <b>${['A','B','C','D'][h.chosen]}</b> | 
-                        เฉลย: <b class="text-emerald-700">${['A','B','C','D'][h.correct]}</b>
-                    </div>
-                    ${h.explanation ? `<div class="p-2.5 rounded bg-white border border-slate-200 text-xs text-slate-600">💡 <b>คำอธิบาย:</b> ${h.explanation}</div>` : ''}
-                `;
-                reviewContainer.appendChild(reviewItem);
-            });
-
-            renderMath();
-        }
-
-        // ---------- Sequential & Live Mode ----------
-        function loadSequentialQuestion(index) {
-            currentIndex = index;
-            const q = sequentialQuestions[currentIndex];
-            document.getElementById('questionProgress').innerText = `ข้อที่ ${currentIndex + 1} / ${sequentialQuestions.length}`;
+        function loadQuestion(idx) {
+            currentIndex = idx;
+            const q = questions[currentIndex];
+            document.getElementById('questionProgress').innerText = `ข้อที่ ${currentIndex + 1} / ${questions.length}`;
             document.getElementById('questionText').innerHTML = `<span class="text-indigo-600 font-bold">ข้อ ${currentIndex + 1}:</span> ${q.question}`;
 
+            const container = document.getElementById('choicesContainer');
+            container.innerHTML = '';
             const chosen = userAnswers[q.id];
-            renderChoices(q, chosen, (idx) => {
-                userAnswers[q.id] = idx;
-                loadSequentialQuestion(currentIndex);
+            const letters = ['A', 'B', 'C', 'D'];
+
+            q.choices.forEach((ch, cIdx) => {
+                const isSelected = (chosen === cIdx);
+                const btn = document.createElement('button');
+                btn.className = `w-full text-left p-3.5 rounded-xl border transition flex items-center gap-3 text-sm sm:text-base ${
+                    isSelected ? 'border-indigo-600 bg-indigo-50 font-medium text-indigo-950 ring-2 ring-indigo-500/20' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                }`;
+                btn.onclick = () => {
+                    userAnswers[q.id] = cIdx;
+                    loadQuestion(currentIndex);
+                };
+                btn.innerHTML = `
+                    <span class="w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}">${letters[cIdx]}</span>
+                    <span class="flex-1">${ch}</span>
+                `;
+                container.appendChild(btn);
             });
 
             document.getElementById('btnPrev').disabled = (currentIndex === 0);
-            if (currentIndex === sequentialQuestions.length - 1) {
+            if (currentIndex === questions.length - 1) {
                 document.getElementById('btnNext').classList.add('hidden');
                 document.getElementById('btnSubmit').classList.remove('hidden');
             } else {
                 document.getElementById('btnNext').classList.remove('hidden');
                 document.getElementById('btnSubmit').classList.add('hidden');
-                document.getElementById('btnNext').innerText = "ข้อถัดไป ▶";
-                document.getElementById('btnNext').disabled = false;
-            }
-
-            if (currentMode === 'self' && feedbackMode === 'instant' && chosen !== undefined) {
-                showInstantFeedbackBox(q, chosen);
-            } else {
-                document.getElementById('instantFeedbackBox').classList.add('hidden');
-            }
-
-            renderMath();
-        }
-
-        function renderChoices(q, chosenIdx, onClickCallback) {
-            const container = document.getElementById('choicesContainer');
-            container.innerHTML = '';
-            const letters = ['A', 'B', 'C', 'D'];
-
-            q.choices.forEach((ch, idx) => {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                const isSelected = chosenIdx === idx;
-                
-                btn.className = `w-full text-left p-3.5 rounded-xl border transition flex items-center gap-3 text-sm sm:text-base ${
-                    isSelected ? 'border-indigo-600 bg-indigo-50/80 font-medium text-indigo-950 ring-2 ring-indigo-500/20' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
-                }`;
-                if (onClickCallback) {
-                    btn.onclick = () => onClickCallback(idx);
-                }
-
-                btn.innerHTML = `
-                    <span class="w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}">${letters[idx]}</span>
-                    <span class="flex-1">${ch}</span>
-                `;
-                container.appendChild(btn);
-            });
-        }
-
-        function showInstantFeedbackBox(q, chosenIdx) {
-            const feedbackBox = document.getElementById('instantFeedbackBox');
-            feedbackBox.classList.remove('hidden');
-            const isCorrect = chosenIdx === q.correct_answer_index;
-
-            if (isCorrect) {
-                feedbackBox.className = "p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm";
-                feedbackBox.innerHTML = `
-                    <div class="font-bold flex items-center gap-1.5">✓ ถูกต้อง!</div>
-                    <div class="mt-1 text-slate-600 text-xs">${q.explanation || ''}</div>
-                `;
-            } else {
-                feedbackBox.className = "p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-sm";
-                feedbackBox.innerHTML = `
-                    <div class="font-bold flex items-center gap-1.5">✗ ยังไม่ถูกต้อง (คำตอบที่ถูกคือตัวเลือก ${['A','B','C','D'][q.correct_answer_index]})</div>
-                    <div class="mt-1 text-slate-700 text-xs">${q.explanation || ''}</div>
-                `;
             }
             renderMath();
         }
 
-        function nextQuestion() {
-            if (practiceType === 'endless') {
-                loadNextEndlessQuestion();
-            } else {
-                if (currentIndex < sequentialQuestions.length - 1) {
-                    loadSequentialQuestion(currentIndex + 1);
-                }
-            }
-        }
-
-        function prevQuestion() {
-            if (practiceType === 'sequential' && currentIndex > 0) {
-                loadSequentialQuestion(currentIndex - 1);
-            }
-        }
+        function prevQuestion() { if (currentIndex > 0) loadQuestion(currentIndex - 1); }
+        function nextQuestion() { if (currentIndex < questions.length - 1) loadQuestion(currentIndex + 1); }
 
         async function submitExam() {
-            const answeredCount = Object.keys(userAnswers).length;
-            if (answeredCount < sequentialQuestions.length) {
-                if (!confirm(`คุณทำไปแล้ว ${answeredCount} จาก ${sequentialQuestions.length} ข้อ ยืนยันการส่งคำตอบหรือไม่?`)) return;
-            }
-
+            clearInterval(timerInterval);
             const studentName = document.getElementById('studentNameInput').value.trim() || "Anonymous Student";
             
             try {
                 const res = await fetch('/api/submit', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        student_name: studentName,
-                        answers: userAnswers
-                    })
+                    body: JSON.stringify({ student_name: studentName, answers: userAnswers })
                 });
                 const data = await res.json();
-                if (data.status === 'success') {
-                    showSequentialResultView(data);
-                } else {
-                    alert('เกิดข้อผิดพลาดในการส่งคำตอบ');
-                }
+                showResultView(data);
             } catch (err) {
-                console.error(err);
-                alert('ไม่สามารถส่งคำตอบได้ กรุณาลองใหม่อีกครั้ง');
+                alert('ส่งคำตอบล้มเหลว กรุณาลองใหม่อีกครั้ง');
             }
         }
 
-        function showSequentialResultView(resultData) {
-            clearInterval(timerInterval);
+        function showResultView(resultData) {
             document.getElementById('viewQuiz').classList.add('hidden');
-            document.getElementById('liveTimerBox').classList.add('hidden');
+            document.getElementById('timerBox').classList.add('hidden');
             document.getElementById('viewResult').classList.remove('hidden');
 
-            const details = resultData ? resultData.details : {};
-            const score = resultData ? resultData.score : 0;
-            const total = resultData ? resultData.total : sequentialQuestions.length;
-            const percent = total > 0 ? Math.round((score / total) * 100) : 0;
+            const details = resultData.details || {};
+            document.getElementById('finalScoreDisplay').innerText = `${resultData.score} / ${resultData.total}`;
 
-            document.getElementById('finalScoreDisplay').innerText = `${score} / ${total}`;
-            document.getElementById('accuracyRateText').innerText = `ความถูกต้องเฉลี่ย ${percent}%`;
+            const container = document.getElementById('summaryReviewList');
+            container.innerHTML = '';
 
-            const reviewContainer = document.getElementById('summaryReviewList');
-            reviewContainer.innerHTML = '';
-
-            sequentialQuestions.forEach((q, idx) => {
-                const qIdStr = String(q.id);
-                const itemResult = details[qIdStr] || {};
-                
-                const userChoice = itemResult.chosen !== undefined ? itemResult.chosen : userAnswers[q.id];
-                const correctChoice = itemResult.correct !== undefined ? itemResult.correct : q.correct_answer_index;
-                const isCorrect = itemResult.is_correct !== undefined ? itemResult.is_correct : (userChoice === correctChoice);
-                const explanation = itemResult.explanation || q.explanation || '';
-
-                const reviewItem = document.createElement('div');
-                reviewItem.className = `p-4 rounded-xl border text-sm space-y-2 ${isCorrect ? 'bg-emerald-50/60 border-emerald-200' : 'bg-rose-50/60 border-rose-200'}`;
-                
-                reviewItem.innerHTML = `
+            questions.forEach((q, idx) => {
+                const item = details[String(q.id)] || {};
+                const isCorrect = item.is_correct;
+                const div = document.createElement('div');
+                div.className = `p-4 rounded-xl border text-sm space-y-2 ${isCorrect ? 'bg-emerald-50/60 border-emerald-200' : 'bg-rose-50/60 border-rose-200'}`;
+                div.innerHTML = `
                     <div class="font-bold ${isCorrect ? 'text-emerald-800' : 'text-rose-800'}">
                         ข้อ ${idx + 1}: ${isCorrect ? '✓ ถูกต้อง' : '✗ ไม่ถูกต้อง'}
                     </div>
                     <div class="text-slate-800 font-medium">${q.question}</div>
                     <div class="text-xs text-slate-600">
-                        คุณตอบ: <b>${userChoice !== undefined && userChoice >= 0 ? ['A','B','C','D'][userChoice] : 'ไม่ตอบ'}</b> | 
-                        เฉลย: <b class="text-emerald-700">${correctChoice !== undefined ? ['A','B','C','D'][correctChoice] : '-'}</b>
+                        คุณตอบ: <b>${item.chosen !== undefined ? ['A','B','C','D'][item.chosen] : 'ไม่ตอบ'}</b> | 
+                        เฉลย: <b class="text-emerald-700">${item.correct !== undefined ? ['A','B','C','D'][item.correct] : '-'}</b>
                     </div>
-                    ${explanation ? `<div class="p-2.5 rounded bg-white border border-slate-200 text-xs text-slate-600">💡 <b>คำอธิบาย:</b> ${explanation}</div>` : ''}
+                    ${item.explanation ? `<div class="p-2.5 rounded bg-white border border-slate-200 text-xs text-slate-600">💡 <b>คำอธิบาย:</b> ${item.explanation}</div>` : ''}
                 `;
-                reviewContainer.appendChild(reviewItem);
+                container.appendChild(div);
             });
-
             renderMath();
         }
 
-        function startLiveTimer(seconds) {
+        function startCountdown(seconds) {
             remainingSeconds = seconds;
             updateTimerDisplay();
             timerInterval = setInterval(() => {
                 remainingSeconds--;
                 if (remainingSeconds <= 0) {
                     clearInterval(timerInterval);
-                    alert('⏰ หมดเวลาทำข้อสอบแล้ว ระบบจะทำการส่งคำตอบอัตโนมัติ');
+                    alert('⏰ หมดเวลาสอบแล้ว ระบบจะทำการส่งคำตอบอัตโนมัติ');
                     submitExam();
                 }
                 updateTimerDisplay();
@@ -607,12 +238,12 @@
         function updateTimerDisplay() {
             const m = Math.floor(Math.max(0, remainingSeconds) / 60);
             const s = Math.max(0, remainingSeconds) % 60;
-            document.getElementById('studentTimer').innerText = 
-                `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            document.getElementById('timerDisplay').innerText = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
         }
 
         window.addEventListener('DOMContentLoaded', () => {
             checkStatus();
+            pollInterval = setInterval(checkStatus, 2000); // ตรวจสอบสถานะทุกๆ 2 วินาที
             setTimeout(renderMath, 400);
         });
     </script>
